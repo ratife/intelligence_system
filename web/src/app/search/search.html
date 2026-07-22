@@ -1,0 +1,103 @@
+<div class="page">
+  <h1>Recherche par visage</h1>
+  <p class="subtitle">Retrouve les événements où la personne d'une photo apparaît.</p>
+
+  <form class="search-form" (ngSubmit)="onSubmit()">
+    <fieldset class="credentials">
+      <legend>Identification</legend>
+      <label>
+        Acteur (X-Actor-Id)
+        <input type="text" name="actorId" [(ngModel)]="actorId" placeholder="alice" required />
+      </label>
+      <label>
+        Jeton (Bearer)
+        <input
+          type="password"
+          name="bearerToken"
+          [(ngModel)]="bearerToken"
+          placeholder="change-me-in-production"
+          required
+        />
+      </label>
+    </fieldset>
+
+    <label class="file-field">
+      Photo à rechercher
+      <input type="file" accept="image/*" (change)="onFileSelected($event)" required />
+    </label>
+
+    <details class="advanced">
+      <summary>Options avancées</summary>
+      <div class="advanced-grid">
+        <label>
+          Index de visage
+          <input type="number" name="faceIndex" min="0" [(ngModel)]="faceIndex" />
+        </label>
+        <label>
+          Seuil de similarité
+          <input
+            type="number"
+            name="threshold"
+            min="0"
+            max="1"
+            step="0.01"
+            [(ngModel)]="threshold"
+          />
+        </label>
+        <label>
+          Date de début
+          <input type="date" name="dateFrom" [(ngModel)]="dateFrom" />
+        </label>
+        <label>
+          Date de fin
+          <input type="date" name="dateTo" [(ngModel)]="dateTo" />
+        </label>
+        <label>
+          Nombre de résultats
+          <input type="number" name="limit" min="1" max="100" [(ngModel)]="limit" />
+        </label>
+      </div>
+      <p class="hint">
+        Si plusieurs visages sont détectés dans la photo, l'API renverra une erreur invitant à
+        préciser l'index de visage ci-dessus.
+      </p>
+    </details>
+
+    <button type="submit" [disabled]="loading()">
+      {{ loading() ? 'Recherche en cours…' : 'Rechercher' }}
+    </button>
+  </form>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  @if (queryInfo(); as info) {
+    <p class="query-info">
+      {{ info.faces_detected }} visage(s) détecté(s) dans la photo — visage utilisé n°{{
+        info.face_used.index
+      }}
+      (score {{ info.face_used.quality | number: '1.2-2' }}), modèle {{ info.model_version }}.
+    </p>
+  }
+
+  @if (hasSearched() && !error() && results().length === 0) {
+    <p class="empty">Aucun événement trouvé au-dessus du seuil.</p>
+  }
+
+  <div class="results">
+    @for (match of results(); track match.event_id) {
+      <article class="card">
+        <img [src]="match.evidence.image_url" [alt]="match.description" />
+        <div class="card-body">
+          <h2>{{ match.description }}</h2>
+          <p class="meta">{{ match.event_date }} — {{ match.address }}</p>
+          <p class="confidence">
+            Confiance : {{ match.confidence | number: '1.2-2' }} ({{ match.match_count }} visage(s)
+            correspondant(s))
+          </p>
+        </div>
+      </article>
+    }
+  </div>
+</div>

@@ -1,0 +1,28 @@
+# Contexte de build Docker — exclut tout ce qui est inutile à l'image
+# (API/worker Python), sur le même principe que .gitignore.
+
+.git
+.gitignore
+.dockerignore
+
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+.env
+
+tests/
+web/
+
+Dockerfile
+docker-compose.yml
+
+*.md
+*.pdf
+*.odt

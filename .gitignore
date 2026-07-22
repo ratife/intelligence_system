@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Caches d'outils (lint/types/tests)
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environnement virtuel
+.venv/
+
+# Secrets/config locale — jamais commit (voir .env.example)
+.env
+
+# IDE / éditeurs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Interface web (Angular) — voir aussi web/.gitignore
+web/node_modules/
+web/dist/
+web/.angular/
