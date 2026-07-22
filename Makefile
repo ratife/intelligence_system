@@ -3,6 +3,7 @@
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
 PIP    := $(VENV)/bin/pip
+FOLDER := /home/eugene/Documents/DOSSIER-TIFE/RCR/IMAGE
 
 TOKEN ?= change-me-in-production
 
@@ -40,8 +41,16 @@ trigger-indexing: ## Publie en file les images en attente d'indexation (TOKEN=..
 		-H "X-Actor-Id: admin"
 
 .PHONY: index-folder
-index-folder: ## Teste détection/qualité/embedding sur un dossier local : make index-folder FOLDER=chemin
+index-folder: ## Teste détection/qualité/embedding sur un dossier local, sans écriture : make index-folder FOLDER=chemin
 	$(PYTHON) -m facereco.interface.cli.index_folder $(FOLDER)
+
+.PHONY: import-folder
+import-folder: ## Indexe pour de vrai un dossier local (events/event_images + upload S3 + persistance) : make import-folder FOLDER=chemin [EVENT_ID=1] [DESCRIPTION=...] [EVENT_DATE=AAAA-MM-JJ] [ADDRESS=...]
+	$(PYTHON) -m facereco.interface.cli.import_folder $(FOLDER) \
+		$(if $(EVENT_ID),--event-id $(EVENT_ID)) \
+		$(if $(DESCRIPTION),--description "$(DESCRIPTION)") \
+		$(if $(EVENT_DATE),--event-date $(EVENT_DATE)) \
+		$(if $(ADDRESS),--address "$(ADDRESS)")
 
 .PHONY: web-install
 web-install: ## Installe les dépendances de l'interface web

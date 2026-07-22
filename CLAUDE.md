@@ -22,6 +22,9 @@ for this repo — dev/tests use public/synthetic data only.
 
 ## Commands
 
+Most commands below have a `make` equivalent (`make help` lists them all) —
+same commands, shorter to type.
+
 ```bash
 # Install
 python3 -m venv .venv && source .venv/bin/activate
@@ -40,6 +43,10 @@ python -m facereco.interface.worker.indexing_worker
 # Dev-only: test detection/quality/embedding on a local folder of images,
 # no DB/Redis/S3, no Event required (see interface/cli/index_folder.py)
 python -m facereco.interface.cli.index_folder /path/to/folder
+
+# Dev-only: actually index a local folder — creates events/event_images,
+# uploads to S3/MinIO, persists embeddings (see interface/cli/import_folder.py)
+python -m facereco.interface.cli.import_folder /path/to/folder [--event-id N]
 
 # Web UI (Angular, standalone components) — search-by-face frontend, web/
 cd web && npm install && npm start   # http://localhost:4200, API must be on :8000

@@ -103,6 +103,25 @@ données, sans file Redis, sans rattachement à un `Event`. Utile pour valider
 rapidement le comportement de détection/qualité sur des images arbitraires
 avant de les faire transiter par le pipeline complet (worker + Postgres).
 
+## Indexer pour de vrai un dossier local
+
+```bash
+python -m facereco.interface.cli.import_folder /chemin/vers/dossier
+# ou en rattachant à un événement existant :
+python -m facereco.interface.cli.import_folder /chemin/vers/dossier --event-id 1
+```
+
+Contrairement à l'outil de test ci-dessus, celui-ci **persiste réellement** :
+il crée les lignes `events`/`event_images` (un nouvel événement si
+`--event-id` n'est pas fourni — `--description`/`--event-date`/`--address`
+pour le personnaliser), upload chaque image dans MinIO/S3, puis exécute le
+pipeline d'indexation complet (comme le worker de production). Les
+empreintes deviennent immédiatement cherchables via `/api/v1/search/by-face`
+ou l'interface web. Idempotent : une image déjà importée (même contenu) est
+ignorée, pas dupliquée. Pratique pour peupler un environnement de dev/démo
+sans dépendre du système d'événements pré-existant (hors périmètre en
+production, cf. "Périmètre de cette implémentation" ci-dessus).
+
 ## Déclencher une indexation
 
 ```bash
