@@ -1,1 +1,15 @@
-<app-search></app-search>
+<nav class="app-nav">
+  <button [class.active]="page() === 'search'" (click)="selectPage('search')">Recherche</button>
+  <button [class.active]="page() === 'import'" (click)="selectPage('import')">
+    Importer un événement
+  </button>
+</nav>
+
+@switch (page()) {
+  @case ('search') {
+    <app-search></app-search>
+  }
+  @case ('import') {
+    <app-event-import></app-event-import>
+  }
+}

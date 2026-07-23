@@ -105,6 +105,15 @@ when touching detection/embedding code:
   makes cosine similarity reduce to a dot product and lets pgvector's HNSW
   index work. Never construct one from a raw un-normalized vector directly —
   use `EmbeddingVector.from_raw`.
+- **`EventRepositoryPort`/`ObjectStoragePort` deliberately have no create
+  methods** — in production `events`/`event_images` and the object storage
+  are populated by the pre-existing external events system (§2.1), not by
+  this service. The dev/demo paths that need to create data anyway
+  (`interface/cli/import_folder.py`, `interface/api/routers/admin_events.py`)
+  go through `infrastructure/devtools/event_import.py`, which bypasses the
+  ports on purpose (direct ORM + boto3) — don't "fix" this by adding create
+  methods to the ports; that would blur a real architectural boundary for
+  the sake of tooling that isn't a production use case.
 
 ### Idempotency and quality gating (worker path)
 
@@ -173,16 +182,45 @@ actually about the IAM migration.
 
 A separate Angular workspace (standalone components, no NgModules — scaffolded
 with Angular CLI 21, 2025 file-naming style: `search.ts`/`.html`/`.css`, no
-`.component.` infix). It's a thin client for `POST /api/v1/search/by-face`
-only — no indexing UI. `src/app/models/search.model.ts` mirrors
-`interface/api/schemas/search.py`'s Pydantic schemas field-for-field; if that
-schema changes, update the TS interfaces by hand (no codegen wired up).
-Auth (bearer token + actor id) is entered in the UI and persisted to
-`localStorage`, matching the backend's MVP-level shared-token auth — see
-"Auth" above. The FastAPI app has `CORSMiddleware` configured via
+`.component.` infix). Two tabs, toggled in `app.ts` via a plain signal (no
+Angular Router — `ng new` was run with `--routing=false`): **Recherche**
+(`search/`, `POST /api/v1/search/by-face`) and **Importer un événement**
+(`event-import/`, the `admin_events` routes below). `src/app/models/*.model.ts`
+mirror the backend's Pydantic schemas field-for-field by hand (no codegen
+wired up) — update both sides together when a schema changes. Auth (bearer
+token + actor id) lives in the shared `AuthCredentialsService`
+(`services/auth-credentials.service.ts`), persisted to `localStorage` and
+injected into both tabs — don't reintroduce per-component copies of this
+state. The FastAPI app has `CORSMiddleware` configured via
 `settings.cors_allowed_origins` (defaults to `http://localhost:4200`)
 specifically so this dev server can call it; keep that setting in sync if the
 frontend's origin/port changes.
+
+**This app has no `zone.js`** (not in `package.json`, nothing in
+`app.config.ts`) — Angular 21's zoneless mode. Change detection only runs
+after: a signal write, or a template-bound event handler
+(`(click)`/`(change)`/`(ngModelChange)`/etc.) completing. A plain class field
+mutated inside an RxJS `.subscribe()` callback (i.e. anything resolved async,
+outside the synchronous call stack of a template event handler) will **not**
+re-render the view — this bit `EventImport.events` during development (a
+`FaceEvent[]` field set from an HTTP response never showed up in the
+`<select>` until it was converted to a `signal<FaceEvent[]>`). Any state
+written from a `.subscribe()`/`.then()` callback must be a signal; state only
+ever mutated synchronously from a template event handler can stay a plain
+field.
+
+### Admin/import routes (`interface/api/routers/admin_events.py`)
+
+`GET/POST /api/v1/admin/events` and `POST /api/v1/admin/events/{id}/images`
+back the "Importer un événement" tab. Like `import_folder.py`, these are
+dev/demo routes built on `infrastructure/devtools/event_import.py` (see the
+port note above) — not part of the production API surface implied by the
+technical scoping doc. Image indexing happens synchronously in the request
+(calls `ProcessImageMessageUseCase` directly, reusing the detector/embedder/
+object storage singletons from `app.state` via the existing `deps.py`
+providers) rather than going through the Redis queue + worker — intentional,
+so the UI gets an immediate per-image accepted/rejected count instead of
+having to poll.
 
 ## Testing conventions
 

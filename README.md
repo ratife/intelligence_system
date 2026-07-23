@@ -122,6 +122,33 @@ ignorée, pas dupliquée. Pratique pour peupler un environnement de dev/démo
 sans dépendre du système d'événements pré-existant (hors périmètre en
 production, cf. "Périmètre de cette implémentation" ci-dessus).
 
+## Créer un événement et lui importer des images (API / interface web)
+
+Même fonctionnalité que la commande ci-dessus, mais via HTTP — utilisée par
+l'onglet « Importer un événement » de l'interface web :
+
+```bash
+# Créer un événement
+curl -X POST http://localhost:8000/api/v1/admin/events \
+  -H "Authorization: Bearer change-me-in-production" -H "X-Actor-Id: admin" \
+  -H "Content-Type: application/json" \
+  -d '{"description": "Concert au parc", "event_date": "2026-06-15", "address": "Antananarivo"}'
+
+# Lui importer des images (plusieurs possibles, champ répété "images")
+curl -X POST http://localhost:8000/api/v1/admin/events/1/images \
+  -H "Authorization: Bearer change-me-in-production" -H "X-Actor-Id: admin" \
+  -F "images=@photo1.jpg" -F "images=@photo2.jpg"
+
+# Lister les événements existants
+curl http://localhost:8000/api/v1/admin/events \
+  -H "Authorization: Bearer change-me-in-production" -H "X-Actor-Id: admin"
+```
+
+Comme `import_folder`, ces routes contournent volontairement les ports du
+Domain (dev/démo uniquement, cf. `infrastructure/devtools/event_import.py`)
+et indexent réellement les images envoyées (empreintes persistées,
+immédiatement cherchables).
+
 ## Déclencher une indexation
 
 ```bash
@@ -142,12 +169,17 @@ npm install
 npm start
 ```
 
-Sert l'interface de recherche par visage sur http://localhost:4200 (Angular,
-composants standalone). L'API doit tourner sur http://localhost:8000
-(`CORS_ALLOWED_ORIGINS` autorise `http://localhost:4200` par défaut). Le
-formulaire demande le jeton `Bearer` et l'`X-Actor-Id` (mêmes valeurs que pour
-l'API, persistées en `localStorage` du navigateur) puis affiche les
-événements retrouvés avec leur preuve (image + score de confiance).
+Sert l'interface sur http://localhost:4200 (Angular, composants standalone),
+avec deux onglets. L'API doit tourner sur http://localhost:8000
+(`CORS_ALLOWED_ORIGINS` autorise `http://localhost:4200` par défaut). Les
+deux onglets demandent le jeton `Bearer` et l'`X-Actor-Id` (mêmes valeurs que
+pour l'API, persistées en `localStorage` du navigateur) :
+
+- **Recherche** : soumet une photo, affiche les événements retrouvés avec
+  leur preuve (image + score de confiance).
+- **Importer un événement** : crée un nouvel événement (ou en choisit un
+  existant dans une liste) et y importe/indexe réellement une ou plusieurs
+  images (§ "Créer un événement et lui importer des images" ci-dessus).
 
 ## Rechercher par visage
 

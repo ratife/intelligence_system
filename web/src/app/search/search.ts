@@ -4,10 +4,8 @@ import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { EventMatch, SearchQueryInfo } from '../models/search.model';
+import { AuthCredentialsService } from '../services/auth-credentials.service';
 import { SearchService } from '../services/search.service';
-
-const ACTOR_ID_STORAGE_KEY = 'facereco.actorId';
-const BEARER_TOKEN_STORAGE_KEY = 'facereco.bearerToken';
 
 @Component({
   selector: 'app-search',
@@ -16,9 +14,6 @@ const BEARER_TOKEN_STORAGE_KEY = 'facereco.bearerToken';
   styleUrl: './search.css',
 })
 export class Search {
-  actorId = localStorage.getItem(ACTOR_ID_STORAGE_KEY) ?? '';
-  bearerToken = localStorage.getItem(BEARER_TOKEN_STORAGE_KEY) ?? '';
-
   faceIndex: number | null = null;
   threshold: number | null = null;
   dateFrom = '';
@@ -33,7 +28,10 @@ export class Search {
   readonly queryInfo = signal<SearchQueryInfo | null>(null);
   readonly results = signal<EventMatch[]>([]);
 
-  constructor(private readonly searchService: SearchService) {}
+  constructor(
+    private readonly searchService: SearchService,
+    readonly credentials: AuthCredentialsService,
+  ) {}
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -46,16 +44,15 @@ export class Search {
       return;
     }
 
-    localStorage.setItem(ACTOR_ID_STORAGE_KEY, this.actorId);
-    localStorage.setItem(BEARER_TOKEN_STORAGE_KEY, this.bearerToken);
+    this.credentials.persist();
 
     this.loading.set(true);
     this.error.set(null);
 
     this.searchService
       .searchByFace({
-        actorId: this.actorId,
-        bearerToken: this.bearerToken,
+        actorId: this.credentials.actorId,
+        bearerToken: this.credentials.bearerToken,
         image: this.selectedFile,
         faceIndex: this.faceIndex ?? undefined,
         threshold: this.threshold ?? undefined,

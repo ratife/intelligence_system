@@ -7,14 +7,20 @@
       <legend>Identification</legend>
       <label>
         Acteur (X-Actor-Id)
-        <input type="text" name="actorId" [(ngModel)]="actorId" placeholder="alice" required />
+        <input
+          type="text"
+          name="actorId"
+          [(ngModel)]="credentials.actorId"
+          placeholder="alice"
+          required
+        />
       </label>
       <label>
         Jeton (Bearer)
         <input
           type="password"
           name="bearerToken"
-          [(ngModel)]="bearerToken"
+          [(ngModel)]="credentials.bearerToken"
           placeholder="change-me-in-production"
           required
         />

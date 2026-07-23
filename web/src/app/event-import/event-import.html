@@ -1,0 +1,108 @@
+<div class="page">
+  <h1>Importer un événement</h1>
+  <p class="subtitle">
+    Crée un événement (ou choisis-en un existant) et indexe réellement les images fournies.
+  </p>
+
+  <form class="import-form" (ngSubmit)="onSubmit()">
+    <fieldset class="credentials">
+      <legend>Identification</legend>
+      <label>
+        Acteur (X-Actor-Id)
+        <input type="text" name="actorId" [(ngModel)]="credentials.actorId" placeholder="alice" required />
+      </label>
+      <label>
+        Jeton (Bearer)
+        <input
+          type="password"
+          name="bearerToken"
+          [(ngModel)]="credentials.bearerToken"
+          placeholder="change-me-in-production"
+          required
+        />
+      </label>
+    </fieldset>
+
+    <div class="mode-tabs">
+      <button type="button" [class.active]="mode === 'new'" (click)="selectMode('new')">
+        Nouvel événement
+      </button>
+      <button type="button" [class.active]="mode === 'existing'" (click)="selectMode('existing')">
+        Événement existant
+      </button>
+    </div>
+
+    @if (mode === 'new') {
+      <fieldset class="event-fields">
+        <legend>Nouvel événement</legend>
+        <label>
+          Description
+          <input type="text" name="description" [(ngModel)]="newDescription" required />
+        </label>
+        <label>
+          Date
+          <input type="date" name="eventDate" [(ngModel)]="newEventDate" required />
+        </label>
+        <label>
+          Adresse
+          <input type="text" name="address" [(ngModel)]="newAddress" required />
+        </label>
+      </fieldset>
+    } @else {
+      <fieldset class="event-fields">
+        <legend>Événement existant</legend>
+        <label>
+          Choisir un événement
+          <select name="existingEvent" [(ngModel)]="selectedEventId">
+            <option [ngValue]="null">— sélectionner —</option>
+            @for (event of events(); track event.id) {
+              <option [ngValue]="event.id">
+                #{{ event.id }} — {{ event.description }} ({{ event.event_date }})
+              </option>
+            }
+          </select>
+        </label>
+        <button type="button" class="refresh" (click)="refreshEvents()">Rafraîchir la liste</button>
+      </fieldset>
+    }
+
+    <label class="file-field">
+      Images à importer (plusieurs possibles)
+      <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" required />
+    </label>
+
+    <button type="submit" [disabled]="loading()">
+      {{ loading() ? 'Import en cours…' : 'Importer et indexer' }}
+    </button>
+  </form>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  @if (results().length > 0) {
+    <div class="results">
+      <h2>Résultat — événement #{{ resultEventId() }}</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Fichier</th>
+            <th>Statut</th>
+            <th>Visages acceptés</th>
+            <th>Visages rejetés</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (result of results(); track result.image_id) {
+            <tr>
+              <td>{{ result.filename }}</td>
+              <td>{{ result.duplicate ? 'déjà importé' : 'importé' }}</td>
+              <td>{{ result.faces_accepted }}</td>
+              <td>{{ result.faces_rejected }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
