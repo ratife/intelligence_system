@@ -1,0 +1,299 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1>Tableau de bord</h1>
+      <p class="subtitle">
+        État du système à l'instant de la consultation — volumétrie, qualité de détection, activité
+        de recherche.
+      </p>
+    </div>
+    <div class="actions">
+      @if (loadedAt(); as at) {
+        <span class="loaded-at">Relevé à {{ formatTime(at) }}</span>
+      }
+      <button
+        type="button"
+        class="btn btn--quiet btn--sm"
+        (click)="refresh()"
+        [disabled]="loading()"
+      >
+        {{ loading() ? 'Chargement…' : 'Rafraîchir' }}
+      </button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="alert alert--error" role="alert">{{ error() }}</p>
+  }
+
+  @if (stats(); as s) {
+    @if (isEmpty()) {
+      <p class="alert alert--info">
+        Aucun événement ni image pour l'instant. Importez des images depuis l'onglet
+        <strong>Importer un événement</strong> — les indicateurs se rempliront ensuite.
+      </p>
+    }
+
+    <!-- Figure principale : la question posée en premier, « combien d'images indexées ». -->
+    <section class="card hero-card">
+      <p class="micro-label">Images indexées</p>
+      <p class="hero">{{ s.indexed_image_count }}</p>
+      <p class="hero-sub">
+        sur {{ s.image_count }} image(s) reçue(s) — {{ percent(s.indexing_completion_rate) }}&nbsp;%
+        traité(s)
+      </p>
+
+      <div
+        class="meter"
+        role="progressbar"
+        aria-label="Avancement de l'indexation"
+        [attr.aria-valuenow]="percent(s.indexing_completion_rate)"
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
+        <div class="meter-fill" [style.width.%]="percent(s.indexing_completion_rate)"></div>
+      </div>
+
+      @if (s.pending_image_count > 0) {
+        <div class="pending">
+          <p class="meter-note">
+            <b>{{ s.pending_image_count }}</b> image(s) en attente d'indexation.
+          </p>
+          <button
+            type="button"
+            class="btn btn--primary btn--sm"
+            (click)="startIndexing()"
+            [disabled]="triggering() || watching()"
+          >
+            @if (triggering()) {
+              Mise en file…
+            } @else if (watching()) {
+              Indexation en cours…
+            } @else {
+              Indexer les images en attente
+            }
+          </button>
+        </div>
+
+        @if (watching()) {
+          <p class="note watching">
+            <span class="pulse" aria-hidden="true"></span>
+            Suivi en direct — le compteur descend à mesure que le worker traite la file.
+            <button type="button" class="btn btn--quiet btn--sm" (click)="stopWatching()">
+              Arrêter le suivi
+            </button>
+          </p>
+        }
+      }
+
+      <!-- Mise en file et indexation sont deux choses distinctes : on ne dit
+           jamais « indexé » alors qu'on a seulement publié dans la file. -->
+      @if (queuedCount() !== null) {
+        @if (queuedCount() === 0) {
+          <p class="note">Aucune image à mettre en file — tout est déjà traité.</p>
+        } @else if (!watching() && s.pending_image_count === 0) {
+          <p class="note">
+            <span aria-hidden="true">✓</span> File vidée — les {{ queuedCount() }} image(s)
+            publiée(s) ont été traitées.
+          </p>
+        } @else {
+          <p class="note">{{ queuedCount() }} image(s) mise(s) en file d'attente.</p>
+        }
+      }
+
+      @if (workerSuspected()) {
+        <p class="alert alert--error worker-warning" role="alert">
+          <b>Rien n'a été traité depuis la mise en file.</b> Les images attendent bien dans la file,
+          mais personne ne la consomme : le worker d'indexation ne tourne probablement pas.
+          Lancez-le avec <code>make worker</code> (ou <code>make start</code>, qui démarre tout),
+          puis relancez l'indexation — l'opération est idempotente, la relancer ne crée pas de
+          doublons.
+        </p>
+      }
+    </section>
+
+    <dl class="tiles">
+      <div class="tile">
+        <dt>Événements</dt>
+        <dd>{{ s.event_count }}</dd>
+      </div>
+      <div class="tile">
+        <dt>Visages indexés</dt>
+        <dd>{{ s.face_count }}</dd>
+      </div>
+      <div class="tile">
+        <dt>Visages par image</dt>
+        <dd>{{ formatDecimal(s.average_faces_per_indexed_image) }}</dd>
+      </div>
+      <div class="tile">
+        <dt>Recherches</dt>
+        <dd>{{ s.search_count }}</dd>
+      </div>
+      <div class="tile">
+        <dt>Utilisateurs distincts</dt>
+        <dd>{{ s.distinct_actor_count }}</dd>
+      </div>
+    </dl>
+
+    <div class="columns">
+      <!-- Répartitions part-à-tout : légende obligatoire, icône + libellé. -->
+      <section class="card">
+        <h2>Répartition</h2>
+
+        @if (imageSegments().length > 0) {
+          <div class="breakdown">
+            <h3>Images ({{ s.image_count }})</h3>
+            <div class="stack">
+              @for (segment of imageSegments(); track segment.label) {
+                <span
+                  class="stack-segment"
+                  [class]="'tone-' + segment.tone"
+                  [style.flexGrow]="segment.count"
+                  [title]="segment.label + ' : ' + segment.count"
+                ></span>
+              }
+            </div>
+            <ul class="legend">
+              @for (segment of imageSegments(); track segment.label) {
+                <li>
+                  <span class="swatch" [class]="'tone-' + segment.tone" aria-hidden="true"></span>
+                  <span class="legend-icon" aria-hidden="true">{{ segment.icon }}</span>
+                  {{ segment.label }} <b>{{ segment.count }}</b>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+
+        @if (s.detected_face_count > 0) {
+          <div class="breakdown">
+            <h3>Visages détectés ({{ s.detected_face_count }})</h3>
+            <div class="stack">
+              @for (segment of faceSegments(); track segment.label) {
+                <span
+                  class="stack-segment"
+                  [class]="'tone-' + segment.tone"
+                  [style.flexGrow]="segment.count"
+                  [title]="segment.label + ' : ' + segment.count"
+                ></span>
+              }
+            </div>
+            <ul class="legend">
+              @for (segment of faceSegments(); track segment.label) {
+                <li>
+                  <span class="swatch" [class]="'tone-' + segment.tone" aria-hidden="true"></span>
+                  <span class="legend-icon" aria-hidden="true">{{ segment.icon }}</span>
+                  {{ segment.label }} <b>{{ segment.count }}</b>
+                </li>
+              }
+            </ul>
+            <p class="note">
+              Taux de rejet qualité : <b>{{ percent(s.quality_rejection_rate) }}&nbsp;%</b> des
+              visages détectés. C'est l'indicateur à surveiller pour régler les seuils de qualité.
+            </p>
+          </div>
+        } @else {
+          <p class="note">Aucun visage détecté pour l'instant.</p>
+        }
+      </section>
+
+      <!-- Motifs de rejet : comparaison de magnitudes → barres, une seule teinte. -->
+      <section class="card">
+        <h2>Motifs de rejet qualité</h2>
+        @if (s.rejections_by_reason.length > 0) {
+          <ul class="bars">
+            @for (item of s.rejections_by_reason; track item.reason) {
+              <li>
+                <span class="bar-label">{{ humanizeReason(item.reason) }}</span>
+                <span class="bar-track">
+                  <span
+                    class="bar-fill"
+                    [style.width.%]="(item.count / topRejectionCount()) * 100"
+                  ></span>
+                </span>
+                <span class="bar-value">{{ item.count }}</span>
+              </li>
+            }
+          </ul>
+          <p class="note">
+            Un rejet n'est jamais silencieux : chaque visage écarté est tracé avec son motif, pour
+            rendre les seuils réglables sur des données réelles.
+          </p>
+        } @else {
+          <p class="note">Aucun rejet enregistré — rien à régler pour l'instant.</p>
+        }
+      </section>
+    </div>
+
+    <!-- Le seuil de similarité par défaut n'est pas calibré : ces deux chiffres le disent. -->
+    <section class="card">
+      <h2>Recherche et calibration du seuil</h2>
+      @if (s.search_count > 0) {
+        <div class="calibration">
+          <div class="calibration-metric">
+            <p class="micro-label">Recherches sans résultat</p>
+            <p class="metric-value">{{ percent(s.empty_search_rate) }}&nbsp;%</p>
+            <div
+              class="meter meter--slim"
+              role="progressbar"
+              aria-label="Part des recherches sans résultat"
+              [attr.aria-valuenow]="percent(s.empty_search_rate)"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <div
+                class="meter-fill"
+                [class.meter-fill--alert]="s.empty_search_rate > 0.5"
+                [style.width.%]="percent(s.empty_search_rate)"
+              ></div>
+            </div>
+            <p class="note">
+              {{ s.empty_search_count }} sur {{ s.search_count }}. Un taux élevé et durable est le
+              premier signe d'un seuil de similarité trop haut.
+            </p>
+          </div>
+
+          <div class="calibration-metric">
+            <p class="micro-label">Confiance moyenne</p>
+            <p class="metric-value">
+              @if (s.average_top_score !== null) {
+                {{ formatDecimal(s.average_top_score) }}
+              } @else {
+                —
+              }
+            </p>
+            <p class="note">
+              Moyenne du meilleur score des recherches <em>abouties</em> uniquement. Le seuil par
+              défaut (0,38) reste non calibré tant qu'aucune campagne sur données réelles n'a été
+              menée.
+            </p>
+          </div>
+        </div>
+      } @else {
+        <p class="note">Aucune recherche enregistrée pour l'instant.</p>
+      }
+    </section>
+
+    <section class="card versions">
+      <h2>Version de modèle en base</h2>
+      @if (s.model_versions.length > 0) {
+        <p class="version-list">
+          @for (version of s.model_versions; track version) {
+            <code>{{ version }}</code>
+          }
+        </p>
+        @if (hasMixedModelVersions()) {
+          <p class="note warn">
+            <span aria-hidden="true">⚠</span> Plusieurs versions cohabitent : les empreintes de
+            versions différentes ne sont pas comparables entre elles. Une réindexation est
+            probablement en cours ou inachevée.
+          </p>
+        }
+      } @else {
+        <p class="note">Aucune empreinte en base.</p>
+      }
+    </section>
+  } @else if (!error()) {
+    <p class="note">Chargement des indicateurs…</p>
+  }
+</div>

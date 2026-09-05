@@ -1,0 +1,39 @@
+<main class="gate">
+  <form class="card" (ngSubmit)="onSubmit()">
+    <h1>Reconnaissance faciale</h1>
+    <p class="subtitle">Connectez-vous pour accéder à l'interface.</p>
+
+    <label>
+      Identifiant
+      <input
+        type="text"
+        name="actorId"
+        autocomplete="username"
+        placeholder="alice"
+        [(ngModel)]="actorId"
+        [disabled]="loading()"
+        required
+      />
+    </label>
+
+    <label>
+      Mot de passe
+      <input
+        type="password"
+        name="password"
+        autocomplete="current-password"
+        [(ngModel)]="password"
+        [disabled]="loading()"
+        required
+      />
+    </label>
+
+    @if (error()) {
+      <p class="alert alert--error" role="alert">{{ error() }}</p>
+    }
+
+    <button type="submit" class="btn btn--primary" [disabled]="loading()">
+      {{ loading() ? 'Vérification…' : 'Se connecter' }}
+    </button>
+  </form>
+</main>

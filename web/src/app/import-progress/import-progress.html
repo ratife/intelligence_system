@@ -1,0 +1,210 @@
+<section class="progress-panel" aria-labelledby="progress-title">
+  <header class="panel-header">
+    <div class="headline">
+      <p class="headline-label" id="progress-title">
+        Progression de l'indexation
+        @if (eventId() !== null) {
+          <span class="event-ref">· événement #{{ eventId() }}</span>
+        }
+      </p>
+      <p class="hero">{{ percent() }}&nbsp;%</p>
+      <p class="headline-sub">{{ processed() }} / {{ total() }} images traitées</p>
+    </div>
+
+    <dl class="timing">
+      <div>
+        <dt>Écoulé</dt>
+        <dd>{{ formatDuration(elapsedMs()) }}</dd>
+      </div>
+      @if (etaMs(); as eta) {
+        <div>
+          <dt>Restant (est.)</dt>
+          <dd>≈ {{ formatDuration(eta) }}</dd>
+        </div>
+      }
+    </dl>
+
+    @if (running()) {
+      <button type="button" class="btn btn--quiet btn--sm stop" (click)="cancelRequested.emit()">
+        Arrêter
+      </button>
+    }
+  </header>
+
+  <div
+    class="meter"
+    role="progressbar"
+    aria-label="Images traitées"
+    [attr.aria-valuenow]="percent()"
+    aria-valuemin="0"
+    aria-valuemax="100"
+  >
+    <div class="meter-fill" [class.meter-fill--alert]="errors() > 0" [style.width.%]="percent()">
+      <span class="visually-hidden">{{ percent() }} %</span>
+    </div>
+  </div>
+
+  <p class="current-line" aria-live="polite">
+    @if (current(); as item) {
+      <span class="pulse" aria-hidden="true"></span>
+      <span class="current-position">{{ currentPosition() }}/{{ total() }}</span>
+      <span class="current-name">{{ item.filename }}</span>
+      <span class="current-phase">
+        @if (item.status === 'uploading') {
+          <!-- Le pourcentage est masqué aux lecteurs d'écran : dans une zone
+               aria-live, il ferait ré-annoncer la ligne à chaque paquet envoyé. -->
+          envoi <span aria-hidden="true">{{ (item.uploadedRatio * 100).toFixed(0) }} %</span>
+        } @else {
+          détection et indexation des visages…
+        }
+      </span>
+    } @else if (running()) {
+      <span class="current-phase">Préparation…</span>
+    } @else {
+      <span class="current-phase">
+        @if (cancelled() > 0) {
+          Import interrompu après {{ formatDuration(elapsedMs()) }} — {{ cancelled() }} image(s) non
+          traitée(s)
+        } @else {
+          Import terminé en {{ formatDuration(elapsedMs()) }}
+        }
+        @if (errors() > 0) {
+          — {{ errors() }} échec(s), voir le détail
+        }
+      </span>
+    }
+  </p>
+
+  <dl class="tiles">
+    <div class="tile">
+      <dt>Images indexées</dt>
+      <dd>{{ indexed() }}</dd>
+    </div>
+    <div class="tile">
+      <dt>Doublons ignorés</dt>
+      <dd>{{ duplicates() }}</dd>
+    </div>
+    <div class="tile">
+      <dt>Échecs</dt>
+      <dd>{{ errors() }}</dd>
+    </div>
+    <div class="tile">
+      <dt>Visages indexés</dt>
+      <dd>{{ facesAccepted() }}</dd>
+    </div>
+    <div class="tile">
+      <dt>Taux de rejet qualité</dt>
+      <dd>{{ rejectionRatePercent() }}&nbsp;%</dd>
+    </div>
+  </dl>
+
+  <div class="breakdown">
+    @if (imageSegments().length > 0) {
+      <section class="breakdown-row">
+        <h3>Issue des images traitées</h3>
+        <div class="stack">
+          @for (segment of imageSegments(); track segment.label) {
+            <span
+              class="stack-segment"
+              [class]="'tone-' + segment.tone"
+              [style.flexGrow]="segment.count"
+              [title]="segment.label + ' : ' + segment.count"
+            ></span>
+          }
+        </div>
+        <ul class="legend">
+          @for (segment of imageSegments(); track segment.label) {
+            <li>
+              <span class="swatch" [class]="'tone-' + segment.tone" aria-hidden="true"></span>
+              <span class="legend-icon" aria-hidden="true">{{ segment.icon }}</span>
+              {{ segment.label }} <b>{{ segment.count }}</b>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (facesDetected() > 0) {
+      <section class="breakdown-row">
+        <h3>Visages détectés ({{ facesDetected() }})</h3>
+        <div class="stack">
+          @for (segment of faceSegments(); track segment.label) {
+            <span
+              class="stack-segment"
+              [class]="'tone-' + segment.tone"
+              [style.flexGrow]="segment.count"
+              [title]="segment.label + ' : ' + segment.count"
+            ></span>
+          }
+        </div>
+        <ul class="legend">
+          @for (segment of faceSegments(); track segment.label) {
+            <li>
+              <span class="swatch" [class]="'tone-' + segment.tone" aria-hidden="true"></span>
+              <span class="legend-icon" aria-hidden="true">{{ segment.icon }}</span>
+              {{ segment.label }} <b>{{ segment.count }}</b>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  </div>
+
+  <table class="detail">
+    <caption class="visually-hidden">
+      Détail de l'indexation, image par image
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Fichier</th>
+        <th scope="col">Statut</th>
+        <th scope="col">Détail</th>
+        <th scope="col" class="num">Visages retenus</th>
+        <th scope="col" class="num">Visages écartés</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (item of items(); track $index) {
+        <tr [class.row-pending]="item.status === 'pending'">
+          <td>
+            <span class="file-name">{{ item.filename }}</span>
+            <span class="file-size">{{ formatSize(item.sizeBytes) }}</span>
+          </td>
+          <td>
+            <span class="chip" [class]="'tone-' + meta(item.status).tone">
+              <span class="chip-icon" aria-hidden="true">{{ meta(item.status).icon }}</span>
+              {{ meta(item.status).label }}
+            </span>
+          </td>
+          <td>
+            <div class="detail-cell">
+              @switch (item.status) {
+                @case ('uploading') {
+                  <span class="mini-meter">
+                    <span class="mini-meter-fill" [style.width.%]="item.uploadedRatio * 100"></span>
+                  </span>
+                  <span class="mini-value">{{ (item.uploadedRatio * 100).toFixed(0) }} %</span>
+                }
+                @case ('indexing') {
+                  <span class="mini-meter mini-meter--indeterminate"></span>
+                }
+                @case ('error') {
+                  <span class="row-error">{{ item.error }}</span>
+                }
+                @default {
+                  @if (item.durationMs !== null) {
+                    <span class="mini-value">{{ formatDuration(item.durationMs) }}</span>
+                  } @else {
+                    <span class="mini-value muted">—</span>
+                  }
+                }
+              }
+            </div>
+          </td>
+          <td class="num">{{ item.status === 'indexed' ? item.facesAccepted : '—' }}</td>
+          <td class="num">{{ item.status === 'indexed' ? item.facesRejected : '—' }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</section>

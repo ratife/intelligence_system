@@ -1,8 +1,11 @@
-import { HttpErrorResponse } from '@angular/common/http';
-import { Component, signal } from '@angular/core';
+import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
+import { Component, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 
-import { FaceEvent, ImportedImage } from '../models/event.model';
+import { ImportProgress } from '../import-progress/import-progress';
+import { FaceEvent } from '../models/event.model';
+import { ImportItem, createImportItem, isTerminalStatus } from '../models/import-progress.model';
 import { AuthCredentialsService } from '../services/auth-credentials.service';
 import { EventImportService } from '../services/event-import.service';
 
@@ -10,11 +13,11 @@ type Mode = 'new' | 'existing';
 
 @Component({
   selector: 'app-event-import',
-  imports: [FormsModule],
+  imports: [FormsModule, ImportProgress],
   templateUrl: './event-import.html',
   styleUrl: './event-import.css',
 })
-export class EventImport {
+export class EventImport implements OnDestroy {
   mode: Mode = 'new';
 
   newDescription = '';
@@ -24,17 +27,28 @@ export class EventImport {
   readonly events = signal<FaceEvent[]>([]);
   selectedEventId: number | null = null;
 
-  selectedFiles: File[] = [];
+  readonly selectedFiles = signal<File[]>([]);
 
-  readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly resultEventId = signal<number | null>(null);
-  readonly results = signal<ImportedImage[]>([]);
+
+  /** File d'import : une entrée par image, mise à jour au fil des réponses. */
+  readonly items = signal<ImportItem[]>([]);
+  readonly running = signal(false);
+  readonly startedAt = signal<number | null>(null);
+  readonly finishedAt = signal<number | null>(null);
+
+  private cancelling = false;
+  private inFlight: Subscription | null = null;
 
   constructor(
     private readonly eventImportService: EventImportService,
-    readonly credentials: AuthCredentialsService,
+    private readonly credentials: AuthCredentialsService,
   ) {}
+
+  ngOnDestroy(): void {
+    this.inFlight?.unsubscribe();
+  }
 
   selectMode(mode: Mode): void {
     this.mode = mode;
@@ -44,7 +58,6 @@ export class EventImport {
   }
 
   refreshEvents(): void {
-    this.credentials.persist();
     this.eventImportService
       .listEvents(this.credentials.actorId, this.credentials.bearerToken)
       .subscribe({
@@ -55,12 +68,13 @@ export class EventImport {
 
   onFilesSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.selectedFiles = input.files ? Array.from(input.files) : [];
+    this.selectedFiles.set(input.files ? Array.from(input.files) : []);
   }
 
   onSubmit(): void {
-    if (this.selectedFiles.length === 0) {
-      this.error.set("Sélectionnez au moins une image.");
+    const files = this.selectedFiles();
+    if (files.length === 0) {
+      this.error.set('Sélectionnez au moins une image.');
       return;
     }
     if (this.mode === 'existing' && this.selectedEventId === null) {
@@ -68,16 +82,20 @@ export class EventImport {
       return;
     }
 
-    this.credentials.persist();
-    this.loading.set(true);
     this.error.set(null);
+    this.cancelling = false;
+    this.items.set(files.map(createImportItem));
+    this.startedAt.set(Date.now());
+    this.finishedAt.set(null);
+    this.resultEventId.set(null);
+    this.running.set(true);
 
     if (this.mode === 'existing') {
-      this.uploadTo(this.selectedEventId as number);
+      this.startQueue(this.selectedEventId as number);
       return;
     }
 
-    this.eventImportService
+    this.inFlight = this.eventImportService
       .createEvent(this.credentials.actorId, this.credentials.bearerToken, {
         description: this.newDescription,
         event_date: this.newEventDate,
@@ -86,34 +104,122 @@ export class EventImport {
       .subscribe({
         next: (event) => {
           this.events.update((events) => [event, ...events]);
-          this.uploadTo(event.id);
+          this.startQueue(event.id);
         },
+        // L'événement n'a pas pu être créé : la file n'a jamais démarré, donc
+        // aucun avancement à montrer — seul le message d'erreur reste pertinent.
         error: (err: HttpErrorResponse) => {
           this.error.set(this.describeError(err));
-          this.loading.set(false);
+          this.items.set([]);
+          this.startedAt.set(null);
+          this.finishRun();
         },
       });
   }
 
-  private uploadTo(eventId: number): void {
-    this.eventImportService
-      .uploadImages(
-        this.credentials.actorId,
-        this.credentials.bearerToken,
-        eventId,
-        this.selectedFiles,
-      )
+  /**
+   * Interrompt la file. La requête en vol est abandonnée côté client ; le
+   * serveur, lui, termine l'indexation de cette image (l'import y est
+   * synchrone) — d'où le statut « annulée » plutôt qu'un retour arrière.
+   */
+  cancelRun(): void {
+    if (!this.running()) {
+      return;
+    }
+    this.cancelling = true;
+    this.inFlight?.unsubscribe();
+    this.inFlight = null;
+    this.markRemainingCancelled();
+    this.finishRun();
+  }
+
+  private startQueue(eventId: number): void {
+    this.resultEventId.set(eventId);
+    this.processNext(eventId, 0);
+  }
+
+  /**
+   * Traite les images une par une, séquentiellement : c'est ce qui produit
+   * l'avancement image par image, et cela évite de saturer les modèles ONNX
+   * (chargés une seule fois côté API) avec des requêtes concurrentes.
+   */
+  private processNext(eventId: number, index: number): void {
+    const files = this.selectedFiles();
+    if (this.cancelling || index >= files.length) {
+      this.finishRun();
+      return;
+    }
+
+    const startedMs = Date.now();
+    this.patchItem(index, { status: 'uploading', uploadedRatio: 0 });
+
+    this.inFlight = this.eventImportService
+      .uploadImage(this.credentials.actorId, this.credentials.bearerToken, eventId, files[index])
       .subscribe({
-        next: (response) => {
-          this.resultEventId.set(response.event_id);
-          this.results.set(response.results);
-          this.loading.set(false);
+        next: (event) => {
+          if (event.type === HttpEventType.UploadProgress) {
+            const ratio = event.total ? Math.min(1, event.loaded / event.total) : 0;
+            this.patchItem(
+              index,
+              ratio >= 1
+                ? { status: 'indexing', uploadedRatio: 1 }
+                : { status: 'uploading', uploadedRatio: ratio },
+            );
+          } else if (event.type === HttpEventType.Response) {
+            const result = event.body?.results[0] ?? null;
+            this.patchItem(
+              index,
+              result === null
+                ? {
+                    status: 'error',
+                    error: "L'API n'a renvoyé aucun résultat pour cette image.",
+                    durationMs: Date.now() - startedMs,
+                  }
+                : {
+                    status: result.duplicate ? 'duplicate' : 'indexed',
+                    uploadedRatio: 1,
+                    imageId: result.image_id,
+                    facesAccepted: result.faces_accepted,
+                    facesRejected: result.faces_rejected,
+                    durationMs: Date.now() - startedMs,
+                  },
+            );
+          }
         },
+        // Une image en échec n'interrompt pas le lot : elle est tracée et la file continue.
         error: (err: HttpErrorResponse) => {
-          this.error.set(this.describeError(err));
-          this.loading.set(false);
+          this.patchItem(index, {
+            status: 'error',
+            error: this.describeError(err),
+            durationMs: Date.now() - startedMs,
+          });
+          this.processNext(eventId, index + 1);
         },
+        complete: () => this.processNext(eventId, index + 1),
       });
+  }
+
+  private patchItem(index: number, patch: Partial<ImportItem>): void {
+    this.items.update((items) =>
+      items.map((item, position) => (position === index ? { ...item, ...patch } : item)),
+    );
+  }
+
+  private markRemainingCancelled(): void {
+    this.items.update((items) =>
+      items.map((item) =>
+        isTerminalStatus(item.status) ? item : { ...item, status: 'cancelled' },
+      ),
+    );
+  }
+
+  private finishRun(): void {
+    this.inFlight = null;
+    if (!this.running()) {
+      return;
+    }
+    this.finishedAt.set(Date.now());
+    this.running.set(false);
   }
 
   private describeError(err: HttpErrorResponse): string {
@@ -122,7 +228,9 @@ export class EventImport {
       return detail;
     }
     if (err.status === 0) {
-      return "Impossible de joindre l'API — vérifiez qu'elle tourne sur " + 'http://localhost:8000.';
+      return (
+        "Impossible de joindre l'API — vérifiez qu'elle tourne sur " + 'http://localhost:8000.'
+      );
     }
     return `Erreur inattendue (HTTP ${err.status}).`;
   }

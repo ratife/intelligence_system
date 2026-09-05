@@ -182,19 +182,52 @@ actually about the IAM migration.
 
 A separate Angular workspace (standalone components, no NgModules — scaffolded
 with Angular CLI 21, 2025 file-naming style: `search.ts`/`.html`/`.css`, no
-`.component.` infix). Two tabs, toggled in `app.ts` via a plain signal (no
-Angular Router — `ng new` was run with `--routing=false`): **Recherche**
+`.component.` infix). Three tabs, toggled in `app.ts` via a plain signal (no
+Angular Router — `ng new` was run with `--routing=false`): **Tableau de bord**
+(`dashboard/`, `GET /api/v1/stats` — the default tab), **Recherche**
 (`search/`, `POST /api/v1/search/by-face`) and **Importer un événement**
 (`event-import/`, the `admin_events` routes below). `src/app/models/*.model.ts`
 mirror the backend's Pydantic schemas field-for-field by hand (no codegen
-wired up) — update both sides together when a schema changes. Auth (bearer
-token + actor id) lives in the shared `AuthCredentialsService`
-(`services/auth-credentials.service.ts`), persisted to `localStorage` and
-injected into both tabs — don't reintroduce per-component copies of this
-state. The FastAPI app has `CORSMiddleware` configured via
+wired up) — update both sides together when a schema changes. The FastAPI app
+has `CORSMiddleware` configured via
 `settings.cors_allowed_origins` (defaults to `http://localhost:4200`)
 specifically so this dev server can call it; keep that setting in sync if the
 frontend's origin/port changes.
+
+**Styling goes through a shared design system, not per-component CSS.**
+`web/src/styles.css` holds the design tokens (surfaces, one ink per role,
+accent, status colors, radii, spacing scale, shadows, a single focus ring) and
+the app-level primitives: `.page`/`.subtitle`/`.micro-label`, `.card`,
+`.btn` + `.btn--primary`/`.btn--quiet`/`.btn--sm`, `.alert--error`/`.alert--info`,
+the form control base styles, and the shared data-viz pieces used by both the
+dashboard and the import progress panel (`.meter`, `.stack`/`.legend`/`.swatch`
++ `.tone-*`, `.tiles`/`.tile`). These are deliberately **global**: Angular's
+view encapsulation only scopes styles written inside a component, so a global
+base is what lets one system reach every screen. A component's own `.css` keeps
+only what is genuinely local to it — no colors in hex, no re-declared page
+shell, card or button. Before adding a rule, check whether the token or
+primitive already exists; before hardcoding a color, add or reuse a token.
+`grep -n "#[0-9a-fA-F]\{3,6\}" web/src/app/*/*.css` must stay empty.
+
+**The whole UI sits behind a login gate.** `app.html` renders `<app-login>`
+(`login/`) until `AuthCredentialsService.unlocked()` is true; only then do the
+tabs and their content exist. The "password" on that screen *is* the shared
+`API_BEARER_TOKEN`, and the "identifiant" is the `X-Actor-Id` — `Login`
+validates them against `GET /api/v1/auth/session`
+(`interface/api/routers/auth.py`, which just exposes `get_current_actor_id`
+and adds no auth logic of its own), so credentials are verified server-side,
+never compared in the browser. Session state lives in the shared
+`AuthCredentialsService` (`services/auth-credentials.service.ts`), backed by
+**`sessionStorage`** (not `localStorage`) so the gate closes when the browser
+does; `unlocked` must stay a signal (it is written from a `.subscribe()` — see
+the zoneless note below). `authInterceptor`
+(`services/auth-interceptor.ts`, wired in `app.config.ts`) calls `lock()` on
+any 401 so a rotated token can't leave the user "logged in" against failing
+screens. Both tabs read `actorId`/`bearerToken` off the service when building
+requests — don't reintroduce per-component credential fields; those inline
+"Identification" fieldsets were removed when the gate landed. Note this gate
+protects the *interface*, not the API: the API was already protected by the
+same token, and a single shared token is still not an IAM (§13).
 
 **This app has no `zone.js`** (not in `package.json`, nothing in
 `app.config.ts`) — Angular 21's zoneless mode. Change detection only runs
@@ -209,6 +242,24 @@ written from a `.subscribe()`/`.then()` callback must be a signal; state only
 ever mutated synchronously from a template event handler can stay a plain
 field.
 
+**Import progress is driven client-side, one image per request.** The admin
+import route indexes synchronously and only answers once the whole batch is
+done, so sending the batch in a single multipart request gives the UI no
+intermediate signal at all. `EventImport` therefore owns the queue: it builds
+one `ImportItem` per selected file (`models/import-progress.model.ts`) and
+walks them sequentially through `EventImportService.uploadImage` (one image,
+`observe: 'events'` + `reportProgress`), patching the item on each HTTP event.
+Sequential, not parallel — the ONNX detector/embedder are single instances on
+the API side. A failed image is recorded and the queue continues; cancelling
+aborts the client request but the server still finishes the image already in
+flight, hence status `cancelled` rather than a rollback. `ImportProgress`
+(`import-progress/`) is presentational and derives everything from that list:
+overall meter, counters, part-to-whole breakdowns (image outcomes, and
+accepted-vs-rejected faces — the quality-gate rejection rate from §6.1), and
+the per-image table. Status is never carried by color alone (icon + label
+everywhere); `anyComponentStyle` budget in `angular.json` was raised from 4kB
+to 8kB for that panel.
+
 ### Admin/import routes (`interface/api/routers/admin_events.py`)
 
 `GET/POST /api/v1/admin/events` and `POST /api/v1/admin/events/{id}/images`
@@ -221,6 +272,56 @@ object storage singletons from `app.state` via the existing `deps.py`
 providers) rather than going through the Redis queue + worker — intentional,
 so the UI gets an immediate per-image accepted/rejected count instead of
 having to poll.
+
+### Re-indexing from the dashboard
+
+The **Tableau de bord** tab has a button that calls
+`POST /api/v1/admin/indexing/trigger` (`routers/indexing.py`) for the images
+still waiting. Two things the UI is careful about, and any change here must
+preserve:
+
+- **Queuing is not indexing.** The endpoint only publishes to the Redis stream;
+  the *worker* does the work. The UI never says "indexed" after a successful
+  trigger — it says "mise en file", then polls `GET /api/v1/stats` every 2s and
+  lets the pending counter fall.
+- **A worker that isn't running looks exactly like a slow one.** If nothing has
+  been consumed after 15s, the UI stops polling and says the worker is probably
+  down (`make worker`, or `make start`). Without that, the queue fills silently
+  and the user waits forever. Re-triggering is safe — indexing is idempotent on
+  `(image_id, model_version, face_index)`.
+
+### Dashboard read model (`GET /api/v1/stats`)
+
+Backs the **Tableau de bord** tab. It is a **read model, not observability** —
+Lot 3 (metrics, traces, alerting) stays deliberately unimplemented, and this
+endpoint takes a snapshot on demand with no history or time series. Don't grow
+it into a metrics pipeline without revisiting that decision.
+
+It goes through the full seam rather than querying the DB from the router:
+`StatisticsPort` (`domain/ports/statistics.py`) → `GetSystemStatisticsUseCase`
+→ `PostgresStatisticsRepository` (`infrastructure/db/statistics_pg.py`), wired
+in `deps.py`. This is a *read* port, kept separate from the write repositories
+so counting methods don't pollute their contracts. It is **not** the devtools
+escape hatch used by `admin_events`/`import_folder`: a dashboard is a product
+feature, not tooling, so the boundary holds.
+
+Raw counters come from SQL; the **rates are computed in the domain**
+(`domain/value_objects/system_statistics.py`) because their denominators encode
+real decisions, unit-tested in `tests/unit/domain/test_system_statistics.py`:
+
+- `quality_rejection_rate` is over *detected faces* (kept + rejected), not images.
+- `average_faces_per_indexed_image` divides by **indexed** images — counting
+  pending ones, which produced no faces yet, would flatten the average.
+- `average_top_score` averages only *successful* searches (`top_score IS NOT NULL`).
+- Every rate returns `0.0` when its denominator is zero — "nothing to measure",
+  not an error. A fresh install must render, not crash.
+- `__post_init__` rejects negative counters and subset-larger-than-set
+  (`indexed > total`), which would mean the aggregate query is wrong.
+
+Two indicators exist to answer open questions the README raises rather than as
+filler: `quality_rejection_rate` + `rejections_by_reason` make the quality gate
+(§6.1) tunable, and `empty_search_rate` + `average_top_score` are the first
+signals on the uncalibrated 0.38 similarity threshold (§10.2).
 
 ## Testing conventions
 

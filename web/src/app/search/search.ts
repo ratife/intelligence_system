@@ -30,7 +30,7 @@ export class Search {
 
   constructor(
     private readonly searchService: SearchService,
-    readonly credentials: AuthCredentialsService,
+    private readonly credentials: AuthCredentialsService,
   ) {}
 
   onFileSelected(event: Event): void {
@@ -43,8 +43,6 @@ export class Search {
       this.error.set("Sélectionnez d'abord une photo.");
       return;
     }
-
-    this.credentials.persist();
 
     this.loading.set(true);
     this.error.set(null);
@@ -81,7 +79,9 @@ export class Search {
       return detail;
     }
     if (err.status === 0) {
-      return "Impossible de joindre l'API — vérifiez qu'elle tourne sur " + 'http://localhost:8000.';
+      return (
+        "Impossible de joindre l'API — vérifiez qu'elle tourne sur " + 'http://localhost:8000.'
+      );
     }
     return `Erreur inattendue (HTTP ${err.status}).`;
   }

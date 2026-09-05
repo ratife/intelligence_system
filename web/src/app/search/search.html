@@ -2,31 +2,7 @@
   <h1>Recherche par visage</h1>
   <p class="subtitle">Retrouve les événements où la personne d'une photo apparaît.</p>
 
-  <form class="search-form" (ngSubmit)="onSubmit()">
-    <fieldset class="credentials">
-      <legend>Identification</legend>
-      <label>
-        Acteur (X-Actor-Id)
-        <input
-          type="text"
-          name="actorId"
-          [(ngModel)]="credentials.actorId"
-          placeholder="alice"
-          required
-        />
-      </label>
-      <label>
-        Jeton (Bearer)
-        <input
-          type="password"
-          name="bearerToken"
-          [(ngModel)]="credentials.bearerToken"
-          placeholder="change-me-in-production"
-          required
-        />
-      </label>
-    </fieldset>
-
+  <form class="card search-form" (ngSubmit)="onSubmit()">
     <label class="file-field">
       Photo à rechercher
       <input type="file" accept="image/*" (change)="onFileSelected($event)" required />
@@ -69,13 +45,13 @@
       </p>
     </details>
 
-    <button type="submit" [disabled]="loading()">
+    <button type="submit" class="btn btn--primary" [disabled]="loading()">
       {{ loading() ? 'Recherche en cours…' : 'Rechercher' }}
     </button>
   </form>
 
   @if (error()) {
-    <p class="error">{{ error() }}</p>
+    <p class="alert alert--error" role="alert">{{ error() }}</p>
   }
 
   @if (queryInfo(); as info) {
@@ -93,14 +69,14 @@
 
   <div class="results">
     @for (match of results(); track match.event_id) {
-      <article class="card">
+      <article class="result">
         <img [src]="match.evidence.image_url" [alt]="match.description" />
-        <div class="card-body">
+        <div class="result-body">
           <h2>{{ match.description }}</h2>
           <p class="meta">{{ match.event_date }} — {{ match.address }}</p>
           <p class="confidence">
-            Confiance : {{ match.confidence | number: '1.2-2' }} ({{ match.match_count }} visage(s)
-            correspondant(s))
+            <b>{{ match.confidence | number: '1.2-2' }}</b>
+            de confiance · {{ match.match_count }} visage(s)
           </p>
         </div>
       </article>

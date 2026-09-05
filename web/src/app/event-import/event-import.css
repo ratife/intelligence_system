@@ -1,150 +1,70 @@
-.page {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
-}
-
-h1 {
-  margin-bottom: 0.25rem;
-}
-
-.subtitle {
-  margin-top: 0;
-  color: #555;
-}
+/* Coquille de page, cartes, champs, boutons et alertes viennent du socle
+   partagé (`src/styles.css`). Ne reste ici que ce qui est propre à l'import. */
 
 .import-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  background: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  gap: var(--space-4);
+  align-items: stretch;
 }
 
-fieldset {
-  border: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
+.import-form > .btn {
+  align-self: flex-start;
 }
 
-fieldset legend {
-  font-weight: 600;
-  padding: 0;
-  margin-bottom: 0.25rem;
-  width: 100%;
-}
-
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.9rem;
-  color: #333;
-  flex: 1;
-  min-width: 160px;
-}
-
-input,
-select {
-  padding: 0.5rem 0.6rem;
-  border: 1px solid #d0d3d8;
-  border-radius: 6px;
-  font-size: 0.95rem;
-}
+/* --- Bascule nouvel événement / événement existant ------------------------ */
 
 .mode-tabs {
-  display: flex;
-  gap: 0.5rem;
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-sm);
+  align-self: flex-start;
 }
 
 .mode-tabs button {
-  padding: 0.5rem 1rem;
-  border: 1px solid #d0d3d8;
-  border-radius: 6px;
-  background: #f4f5f7;
-  cursor: pointer;
+  padding: 0.4rem 0.9rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.88rem;
   font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.mode-tabs button:hover:not(:disabled):not(.active) {
+  color: var(--text-primary);
 }
 
 .mode-tabs button.active {
-  background: #1a56db;
-  color: white;
-  border-color: #1a56db;
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: var(--shadow-card);
 }
+
+.mode-tabs button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* --- Champs d'événement --------------------------------------------------- */
 
 .event-fields {
   align-items: flex-end;
 }
 
-.refresh {
-  padding: 0.5rem 0.9rem;
-  border: 1px solid #d0d3d8;
-  border-radius: 6px;
-  background: #f4f5f7;
-  cursor: pointer;
-  align-self: flex-end;
+.event-fields .btn {
+  flex: none;
 }
 
-.file-field {
-  max-width: 100%;
-}
-
-button[type='submit'] {
-  align-self: flex-start;
-  padding: 0.6rem 1.4rem;
-  border: none;
-  border-radius: 6px;
-  background: #1a56db;
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-button[type='submit']:disabled {
-  background: #9db3e0;
-  cursor: not-allowed;
-}
-
-.error {
-  color: #b91c1c;
-  background: #fee2e2;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  margin-top: 1rem;
-}
-
-.results {
-  margin-top: 1.5rem;
-  background: white;
-  padding: 1.25rem 1.5rem;
-  border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-
-.results h2 {
-  font-size: 1.05rem;
-  margin: 0 0 1rem;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-th,
-td {
-  text-align: left;
-  padding: 0.5rem 0.6rem;
-  border-bottom: 1px solid #eee;
-}
-
-th {
-  color: #666;
-  font-weight: 600;
+.file-count {
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: var(--text-muted);
 }

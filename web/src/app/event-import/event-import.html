@@ -4,30 +4,22 @@
     Crée un événement (ou choisis-en un existant) et indexe réellement les images fournies.
   </p>
 
-  <form class="import-form" (ngSubmit)="onSubmit()">
-    <fieldset class="credentials">
-      <legend>Identification</legend>
-      <label>
-        Acteur (X-Actor-Id)
-        <input type="text" name="actorId" [(ngModel)]="credentials.actorId" placeholder="alice" required />
-      </label>
-      <label>
-        Jeton (Bearer)
-        <input
-          type="password"
-          name="bearerToken"
-          [(ngModel)]="credentials.bearerToken"
-          placeholder="change-me-in-production"
-          required
-        />
-      </label>
-    </fieldset>
-
+  <form class="card import-form" (ngSubmit)="onSubmit()">
     <div class="mode-tabs">
-      <button type="button" [class.active]="mode === 'new'" (click)="selectMode('new')">
+      <button
+        type="button"
+        [class.active]="mode === 'new'"
+        [disabled]="running()"
+        (click)="selectMode('new')"
+      >
         Nouvel événement
       </button>
-      <button type="button" [class.active]="mode === 'existing'" (click)="selectMode('existing')">
+      <button
+        type="button"
+        [class.active]="mode === 'existing'"
+        [disabled]="running()"
+        (click)="selectMode('existing')"
+      >
         Événement existant
       </button>
     </div>
@@ -62,47 +54,44 @@
             }
           </select>
         </label>
-        <button type="button" class="refresh" (click)="refreshEvents()">Rafraîchir la liste</button>
+        <button type="button" class="btn btn--quiet btn--sm" (click)="refreshEvents()">
+          Rafraîchir la liste
+        </button>
       </fieldset>
     }
 
     <label class="file-field">
       Images à importer (plusieurs possibles)
-      <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" required />
+      <input
+        type="file"
+        accept="image/*"
+        multiple
+        [disabled]="running()"
+        (change)="onFilesSelected($event)"
+        required
+      />
+      @if (selectedFiles().length > 0) {
+        <span class="file-count">{{ selectedFiles().length }} fichier(s) sélectionné(s)</span>
+      }
     </label>
 
-    <button type="submit" [disabled]="loading()">
-      {{ loading() ? 'Import en cours…' : 'Importer et indexer' }}
+    <button type="submit" class="btn btn--primary" [disabled]="running()">
+      {{ running() ? 'Import en cours…' : 'Importer et indexer' }}
     </button>
   </form>
 
   @if (error()) {
-    <p class="error">{{ error() }}</p>
+    <p class="alert alert--error" role="alert">{{ error() }}</p>
   }
 
-  @if (results().length > 0) {
-    <div class="results">
-      <h2>Résultat — événement #{{ resultEventId() }}</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Fichier</th>
-            <th>Statut</th>
-            <th>Visages acceptés</th>
-            <th>Visages rejetés</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (result of results(); track result.image_id) {
-            <tr>
-              <td>{{ result.filename }}</td>
-              <td>{{ result.duplicate ? 'déjà importé' : 'importé' }}</td>
-              <td>{{ result.faces_accepted }}</td>
-              <td>{{ result.faces_rejected }}</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+  @if (items().length > 0) {
+    <app-import-progress
+      [items]="items()"
+      [running]="running()"
+      [startedAt]="startedAt()"
+      [finishedAt]="finishedAt()"
+      [eventId]="resultEventId()"
+      (cancelRequested)="cancelRun()"
+    />
   }
 </div>
