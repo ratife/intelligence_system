@@ -1,5 +1,9 @@
 .DEFAULT_GOAL := help
 
+# `start` s'appuie sur trap/kill 0 pour arrêter ses trois processus d'un coup :
+# on fixe le shell plutôt que de dépendre du /bin/sh de la distribution.
+SHELL := /bin/bash
+
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
 PIP    := $(VENV)/bin/pip
@@ -17,6 +21,43 @@ install: ## Crée le venv, installe les dépendances (dev incluses), prépare .e
 	python3 -m venv $(VENV)
 	$(PIP) install -e ".[dev]"
 	[ -f .env ] || cp .env.example .env
+
+# Cibles-fichier d'amorçage : elles permettent à `make start` de fonctionner
+# depuis un clone nu, sans enchaîner install / web-install à la main.
+.env:
+	cp .env.example .env
+
+$(VENV):
+	$(MAKE) install
+
+web/node_modules:
+	$(MAKE) web-install
+
+.PHONY: start
+# Arrêt : `stop` fauche tout le groupe de processus — enfants indirects compris
+# (reloader uvicorn, ng serve, esbuild) — en excluant le shell de la recette et
+# make lui-même. Un simple `kill 0` tuerait aussi make, qui se plaindrait alors
+# en « wait: No child processes » ; et sans le `exit 0` final, make relaierait la
+# mort par signal d'onnxruntime en « Segmentation fault » à chaque Ctrl+C.
+start: .env $(VENV) web/node_modules ## Lance tout le système : infra + API + worker + interface web (Ctrl+C arrête tout)
+	@docker compose up -d --wait
+	@echo ""
+	@echo "  Web    http://localhost:4200"
+	@echo "  API    http://localhost:8000/docs"
+	@echo "  MinIO  http://localhost:9001  (minioadmin / minioadmin)"
+	@echo ""
+	@echo "  Ctrl+C arrête l'API, le worker et le serveur web."
+	@echo "  L'infra Docker continue de tourner : 'make down' pour l'arrêter aussi."
+	@echo ""
+	@PGID=$$(ps -o pgid= -p $$$$ | tr -d ' '); \
+	stop() { kill $$(ps -o pid= -g $$PGID | grep -vw -e $$$$ -e $$PPID) 2>/dev/null || true; }; \
+	trap 'trap - EXIT; stop; exit 0' EXIT INT TERM; \
+	PYTHONUNBUFFERED=1 $(VENV)/bin/uvicorn facereco.interface.api.main:app --reload 2>&1 \
+		| sed -u 's/^/[api]    /' & \
+	PYTHONUNBUFFERED=1 $(PYTHON) -m facereco.interface.worker.indexing_worker 2>&1 \
+		| sed -u 's/^/[worker] /' & \
+	(cd web && npm start) 2>&1 | sed -u 's/^/[web]    /' & \
+	wait
 
 .PHONY: up
 up: ## Démarre l'infra locale (Postgres+pgvector, Redis, MinIO)
