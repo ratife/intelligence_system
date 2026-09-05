@@ -27,6 +27,7 @@ from facereco.interface.api.error_handlers import register_error_handlers
 from facereco.interface.api.routers.auth import router as auth_router
 from facereco.interface.api.routers.indexing import router as indexing_router
 from facereco.interface.api.routers.search import router as search_router
+from facereco.interface.api.routers.statistics import router as statistics_router
 from tests.unit.application.fakes import DeterministicFaceEmbedder, ScriptedFaceDetector
 
 MIGRATIONS_FILE = Path(__file__).resolve().parents[2] / "migrations" / "0001_init.sql"
@@ -71,6 +72,7 @@ def test_app(postgres_container, monkeypatch) -> Iterator[FastAPI]:
     app.include_router(auth_router)
     app.include_router(search_router)
     app.include_router(indexing_router)
+    app.include_router(statistics_router)
     register_error_handlers(app)
 
     query_image = b"query-image-bytes"

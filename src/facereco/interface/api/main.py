@@ -25,6 +25,7 @@ from facereco.interface.api.routers.admin_events import router as admin_events_r
 from facereco.interface.api.routers.auth import router as auth_router
 from facereco.interface.api.routers.indexing import router as indexing_router
 from facereco.interface.api.routers.search import router as search_router
+from facereco.interface.api.routers.statistics import router as statistics_router
 
 
 @asynccontextmanager
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
     app.include_router(search_router)
     app.include_router(indexing_router)
     app.include_router(admin_events_router)
+    app.include_router(statistics_router)
     register_error_handlers(app)
     return app
 

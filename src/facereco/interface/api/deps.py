@@ -14,6 +14,7 @@ from typing import Annotated
 from fastapi import Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from facereco.application.use_cases.get_system_statistics import GetSystemStatisticsUseCase
 from facereco.application.use_cases.index_event_images import TriggerIndexingUseCase
 from facereco.application.use_cases.process_image_message import ProcessImageMessageUseCase
 from facereco.application.use_cases.search_by_face import SearchByFaceUseCase
@@ -25,6 +26,7 @@ from facereco.domain.ports.face_embedding_repository import FaceEmbeddingReposit
 from facereco.domain.ports.message_queue import MessageQueuePort
 from facereco.domain.ports.object_storage import ObjectStoragePort
 from facereco.domain.ports.quota import SearchQuotaPort
+from facereco.domain.ports.statistics import StatisticsPort
 from facereco.domain.ports.vector_search import VectorSearchPort
 from facereco.domain.value_objects.model_version import ModelVersion
 from facereco.infrastructure.audit.postgres_audit_log import PostgresAuditLog
@@ -34,6 +36,7 @@ from facereco.infrastructure.db.face_embedding_repository_pg import (
     PostgresFaceEmbeddingRepository,
 )
 from facereco.infrastructure.db.session import session_scope
+from facereco.infrastructure.db.statistics_pg import PostgresStatisticsRepository
 from facereco.infrastructure.db.vector_search_pgvector import PgVectorSearch
 from facereco.infrastructure.system_clock import SystemClock
 
@@ -80,6 +83,16 @@ def get_vector_search(session: DbSession) -> VectorSearchPort:
 
 def get_audit_log(session: DbSession) -> AuditLogPort:
     return PostgresAuditLog(session)
+
+
+def get_statistics_repository(session: DbSession) -> StatisticsPort:
+    return PostgresStatisticsRepository(session)
+
+
+def get_statistics_use_case(
+    statistics: Annotated[StatisticsPort, Depends(get_statistics_repository)],
+) -> GetSystemStatisticsUseCase:
+    return GetSystemStatisticsUseCase(statistics=statistics)
 
 
 def get_search_use_case(
