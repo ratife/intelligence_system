@@ -94,6 +94,19 @@ def test_app(postgres_container, monkeypatch) -> Iterator[FastAPI]:
 
     yield app
 
+    # Le conteneur Postgres est partagé par tout le module et `CREATE TABLE IF
+    # NOT EXISTS` ne remet rien à zéro : sans ce nettoyage, les données d'un test
+    # fuiteraient dans le suivant. Même stratégie que les tests d'intégration.
+    with engine.begin() as connection:
+        for table in (
+            "search_audit_log",
+            "rejected_faces",
+            "face_embeddings",
+            "event_images",
+            "events",
+        ):
+            connection.execute(text(f"TRUNCATE TABLE {table} CASCADE"))
+
     engine.dispose()
 
 
