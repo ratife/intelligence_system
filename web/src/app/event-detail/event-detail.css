@@ -1,0 +1,125 @@
+/* Coquille de page, cartes, tuiles, barres empilées et alertes viennent du socle
+   partagé (`src/styles.css`). Ne reste ici que ce qui est propre au détail. */
+
+.back {
+  align-self: flex-start;
+  margin-bottom: var(--space-4);
+}
+
+.detail-header {
+  margin-bottom: var(--space-5);
+}
+
+.detail-header h1 {
+  margin-bottom: var(--space-1);
+}
+
+.images-title {
+  margin: var(--space-6) 0 var(--space-4);
+  font-size: 1.05rem;
+}
+
+.image-list {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* Photo à gauche, ce qui en a été tiré à droite : on lit le constat à côté de
+   la preuve, pas dans un autre écran. */
+.image-card {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .image-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.image-media app-face-frame {
+  --frame-max-height: 260px;
+}
+
+.image-facts {
+  min-width: 0;
+}
+
+.status-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+}
+
+/* Statut : icône + intitulé, la couleur ne porte jamais seule l'information. */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-on-accent);
+  background: var(--text-muted);
+}
+
+.status-chip.tone-good {
+  background: var(--good);
+}
+
+.status-chip.tone-accent {
+  background: var(--accent);
+}
+
+.status-chip.tone-critical {
+  background: var(--critical);
+}
+
+.indexed-at {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.face-count {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.face-count--none {
+  color: var(--text-muted);
+}
+
+.discarded {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--hairline);
+}
+
+.discarded ul {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.discarded-index {
+  display: inline-block;
+  min-width: 2.2em;
+  font-weight: 700;
+  color: var(--warning-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.discarded .note {
+  margin-top: var(--space-3);
+}

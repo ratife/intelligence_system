@@ -4,6 +4,9 @@
       <button class="tab" [class.active]="page() === 'dashboard'" (click)="selectPage('dashboard')">
         Tableau de bord
       </button>
+      <button class="tab" [class.active]="page() === 'events'" (click)="selectPage('events')">
+        Événements
+      </button>
       <button class="tab" [class.active]="page() === 'search'" (click)="selectPage('search')">
         Recherche
       </button>
@@ -26,6 +29,9 @@
   @switch (page()) {
     @case ('dashboard') {
       <app-dashboard></app-dashboard>
+    }
+    @case ('events') {
+      <app-events></app-events>
     }
     @case ('search') {
       <app-search></app-search>

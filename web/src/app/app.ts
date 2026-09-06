@@ -2,15 +2,16 @@ import { Component, signal } from '@angular/core';
 
 import { Dashboard } from './dashboard/dashboard';
 import { EventImport } from './event-import/event-import';
+import { Events } from './events/events';
 import { Login } from './login/login';
 import { Search } from './search/search';
 import { AuthCredentialsService } from './services/auth-credentials.service';
 
-type Page = 'dashboard' | 'search' | 'import';
+type Page = 'dashboard' | 'events' | 'search' | 'import';
 
 @Component({
   selector: 'app-root',
-  imports: [Dashboard, Search, EventImport, Login],
+  imports: [Dashboard, Events, Search, EventImport, Login],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

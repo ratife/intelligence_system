@@ -1,7 +1,7 @@
 <div class="frame">
-  <img [src]="src()" [alt]="alt()" (load)="onLoad($event)" />
+  <img [src]="src()" [alt]="alt()" loading="lazy" (load)="onLoad($event)" />
 
-  @for (box of placed(); track box.index) {
+  @for (box of placed(); track $index) {
     <button
       type="button"
       class="face-box"

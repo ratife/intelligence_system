@@ -192,9 +192,10 @@ actually about the IAM migration.
 
 A separate Angular workspace (standalone components, no NgModules — scaffolded
 with Angular CLI 21, 2025 file-naming style: `search.ts`/`.html`/`.css`, no
-`.component.` infix). Three tabs, toggled in `app.ts` via a plain signal (no
+`.component.` infix). Four tabs, toggled in `app.ts` via a plain signal (no
 Angular Router — `ng new` was run with `--routing=false`): **Tableau de bord**
-(`dashboard/`, `GET /api/v1/stats` — the default tab), **Recherche**
+(`dashboard/`, `GET /api/v1/stats` — the default tab), **Événements**
+(`events/` + `event-detail/`, the catalogue routes below), **Recherche**
 (`search/`, `POST /api/v1/search/faces` then `POST /api/v1/search/by-face`)
 and **Importer un événement**
 (`event-import/`, the `admin_events` routes below). `src/app/models/*.model.ts`
@@ -236,6 +237,20 @@ Changing the selected face clears the previous results, which described a
 different person. If detection is unreachable the search stays available (the
 API will arbitrate) and the used face is still framed afterwards from
 `query.face_used`.
+
+**Événements: `events/` loads, `event-detail/` displays.** No router here
+either — the selected event is a signal, and `event-detail/` is presentational
+with an `EventDetail` input, the same split as `event-import/` +
+`import-progress/`. The list is paginated (25 per page, "Charger la suite")
+because an unbounded event list is a query that grows silently with the
+database. Each card is fully clickable through a `::after` overlay on the title
+`<button>` — a `<button>` wrapping block content would be invalid HTML, and a
+`role="button"` on the card would double the target for a screen reader. In the
+detail, each photo carries its indexed faces framed via `face-frame/`; discarded
+faces are listed with their reason and *not* framed, because the database keeps
+no bbox for them (the screen mirrors what is known, it doesn't invent). Rejection
+reasons are humanised by the shared `rejection-reason.ts`, also used by the
+dashboard.
 
 **Styling goes through a shared design system, not per-component CSS.**
 `web/src/styles.css` holds the design tokens (surfaces, one ink per role,

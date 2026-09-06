@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, computed, signal } from '@angular/core';
 
 import { SystemStatistics } from '../models/statistics.model';
+import { humanizeRejectionReason } from '../rejection-reason';
 import { QueueStatus } from '../models/workers.model';
 import { AuthCredentialsService } from '../services/auth-credentials.service';
 import { IndexingService } from '../services/indexing.service';
@@ -211,17 +212,9 @@ export class Dashboard implements OnDestroy {
     return Math.round(rate * 100);
   }
 
-  /**
-   * Motifs de rejet : `taille_visage<40px` → « Taille visage < 40px ».
-   *
-   * Transformation générique (souligné → espace, opérateur aéré) plutôt qu'une
-   * table de correspondance : les motifs sont construits côté domaine avec le
-   * seuil franchi (`quality.py`), une table se désynchroniserait en silence au
-   * moindre changement de seuil ou de critère.
-   */
+  /** Motifs de rejet : `taille_visage<40px` → « Taille visage < 40px ». */
   humanizeReason(reason: string): string {
-    const spaced = reason.replace(/_/g, ' ').replace(/([<>]=?)/g, ' $1 ');
-    return (spaced.charAt(0).toUpperCase() + spaced.slice(1)).replace(/\s+/g, ' ').trim();
+    return humanizeRejectionReason(reason);
   }
 
   formatDecimal(value: number): string {

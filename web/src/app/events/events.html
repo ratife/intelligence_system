@@ -1,0 +1,117 @@
+@if (detail(); as loaded) {
+  <app-event-detail [detail]="loaded" (closed)="closeDetail()" />
+} @else {
+  <div class="page">
+    <header class="page-header">
+      <div>
+        <h1>Événements</h1>
+        <p class="subtitle">
+          Ce que le système a indexé, événement par événement — et ce qu'il a écarté.
+        </p>
+      </div>
+      <button
+        type="button"
+        class="btn btn--quiet btn--sm"
+        (click)="refresh()"
+        [disabled]="loading()"
+      >
+        {{ loading() ? 'Chargement…' : 'Rafraîchir' }}
+      </button>
+    </header>
+
+    @if (error()) {
+      <p class="alert alert--error" role="alert">{{ error() }}</p>
+    }
+
+    @if (detailLoading()) {
+      <p class="note">Ouverture de l'événement…</p>
+    }
+
+    @if (!loading() && events().length === 0 && !error()) {
+      <p class="alert alert--info">
+        Aucun événement enregistré. Créez-en un depuis l'onglet
+        <strong>Importer un événement</strong>.
+      </p>
+    }
+
+    @if (events().length > 0) {
+      <p class="count-line">
+        {{ events().length }} événement(s) affiché(s) sur {{ totalCount() }}.
+      </p>
+
+      <ul class="event-list">
+        @for (summary of events(); track summary.id) {
+          <li class="card event-card">
+            <div class="event-head">
+              <h2 class="event-title">
+                <button type="button" class="event-open" (click)="openEvent(summary.id)">
+                  {{ summary.description }}
+                </button>
+              </h2>
+              <span class="event-date">{{ formatDate(summary.event_date) }}</span>
+            </div>
+            <p class="event-address">{{ summary.address }}</p>
+
+            @if (summary.image_count > 0) {
+              <div
+                class="meter"
+                role="progressbar"
+                [attr.aria-label]="'Avancement de l\'indexation de ' + summary.description"
+                [attr.aria-valuenow]="percent(summary.indexing_completion_rate)"
+                aria-valuemin="0"
+                aria-valuemax="100"
+              >
+                <div
+                  class="meter-fill"
+                  [style.width.%]="percent(summary.indexing_completion_rate)"
+                ></div>
+              </div>
+            }
+
+            <ul class="event-facts">
+              <li>
+                <b>{{ summary.indexed_image_count }}</b> / {{ summary.image_count }} image(s)
+                indexée(s)
+              </li>
+              @if (summary.pending_image_count > 0) {
+                <li>
+                  <span aria-hidden="true">○</span> <b>{{ summary.pending_image_count }}</b> en
+                  attente
+                </li>
+              }
+              <li>
+                <span aria-hidden="true">✓</span> <b>{{ summary.face_count }}</b> visage(s)
+                retenu(s)
+              </li>
+              @if (summary.discarded_face_count > 0) {
+                <li>
+                  <span aria-hidden="true">⚠</span>
+                  <b>{{ summary.discarded_face_count }}</b> écarté(s) ({{
+                    percent(summary.quality_rejection_rate)
+                  }}&nbsp;%)
+                </li>
+              }
+            </ul>
+
+            @if (!summary.is_searchable && summary.image_count > 0) {
+              <p class="unsearchable">
+                <span aria-hidden="true">⚠</span> Aucun visage retenu : introuvable en recherche.
+              </p>
+            }
+          </li>
+        }
+      </ul>
+
+      @if (hasMore()) {
+        <button
+          type="button"
+          class="btn btn--quiet load-more"
+          (click)="loadMore()"
+          [disabled]="loadingMore()"
+        >
+          {{ loadingMore() ? 'Chargement…' : 'Charger la suite' }}
+        </button>
+      }
+    }
+  </div>
+}
