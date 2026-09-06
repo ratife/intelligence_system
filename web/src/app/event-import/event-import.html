@@ -60,22 +60,74 @@
       </fieldset>
     }
 
-    <label class="file-field">
-      Images à importer (plusieurs possibles)
-      <input
-        type="file"
-        accept="image/*"
-        multiple
-        [disabled]="running()"
-        (change)="onFilesSelected($event)"
-        required
-      />
-      @if (selectedFiles().length > 0) {
-        <span class="file-count">{{ selectedFiles().length }} fichier(s) sélectionné(s)</span>
-      }
-    </label>
+    <fieldset class="photo-field">
+      <legend>Photos de l'événement</legend>
 
-    <button type="submit" class="btn btn--primary" [disabled]="running()">
+      <label class="file-field">
+        Ajouter des photos
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          [disabled]="running()"
+          (change)="onFilesSelected($event)"
+        />
+      </label>
+      <p class="note">
+        Sélectionnez-en plusieurs à la fois, et revenez autant de fois que nécessaire : chaque
+        passage <strong>s'ajoute</strong> à la liste au lieu de la remplacer.
+      </p>
+
+      @if (photos().length > 0) {
+        <div class="selection-head">
+          <p class="micro-label">{{ photos().length }} photo(s) — {{ totalSizeLabel() }}</p>
+          <button
+            type="button"
+            class="btn btn--quiet btn--sm"
+            [disabled]="running()"
+            (click)="clearPhotos()"
+          >
+            Tout retirer
+          </button>
+        </div>
+
+        <ul class="photo-list">
+          @for (photo of photos(); track photo.key) {
+            <li [class.photo--oversized]="photo.tooLarge">
+              <span class="photo-name" [title]="photo.file.name">{{ photo.file.name }}</span>
+              <span class="photo-size">{{ formatSize(photo.file.size) }}</span>
+              @if (photo.tooLarge) {
+                <span class="photo-flag"> <span aria-hidden="true">⚠</span> Trop volumineuse </span>
+              }
+              <button
+                type="button"
+                class="photo-remove"
+                [disabled]="running()"
+                [attr.aria-label]="'Retirer ' + photo.file.name"
+                (click)="removePhoto(photo.key)"
+              >
+                <span aria-hidden="true">✕</span>
+              </button>
+            </li>
+          }
+        </ul>
+
+        @if (ignoredDuplicates() > 0) {
+          <p class="note">
+            {{ ignoredDuplicates() }} photo(s) déjà présente(s) dans la liste, ignorée(s).
+          </p>
+        }
+
+        @if (oversizedCount() > 0) {
+          <p class="alert alert--error" role="alert">
+            {{ oversizedCount() }} photo(s) dépasse(nt) la limite de 10 Mo de l'API. Retirez-les
+            pour lancer l'import — elles échoueraient de toute façon.
+          </p>
+        }
+      }
+    </fieldset>
+
+    <button type="submit" class="btn btn--primary" [disabled]="!canSubmit()">
       {{ running() ? 'Import en cours…' : 'Importer et indexer' }}
     </button>
   </form>

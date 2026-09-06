@@ -63,8 +63,112 @@
   flex: none;
 }
 
-.file-count {
-  font-size: 0.82rem;
-  font-weight: 400;
+/* --- Sélection de photos -------------------------------------------------- */
+
+/* Les fieldsets du socle sont en ligne ; celui-ci empile sélecteur, liste et
+   messages, qui se lisent de haut en bas. */
+.photo-field {
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.photo-field .file-field {
+  flex: none;
+}
+
+.photo-field .note,
+.photo-field .alert {
+  margin: 0;
+  max-width: 68ch;
+}
+
+.selection-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.selection-head .micro-label {
+  margin: 0;
+}
+
+.photo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 15rem;
+  overflow-y: auto;
+}
+
+.photo-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+
+/* Un nom de fichier long ne doit pas pousser la taille et le retrait hors du cadre. */
+.photo-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.photo-size {
+  flex: none;
   color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Dépassement de taille : signalé par une icône et un intitulé, pas par la
+   seule couleur du fond. */
+.photo--oversized {
+  background: var(--error-surface);
+}
+
+.photo-flag {
+  flex: none;
+  font-weight: 600;
+  color: var(--error-ink);
+}
+
+.photo-remove {
+  flex: none;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: inherit;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.photo-remove:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--critical);
+}
+
+.photo-remove:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.photo-remove:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
 }

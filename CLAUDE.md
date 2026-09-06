@@ -300,6 +300,22 @@ written from a `.subscribe()`/`.then()` callback must be a signal; state only
 ever mutated synchronously from a template event handler can stay a plain
 field.
 
+**The photo selection accumulates; it does not replace.** A native
+`<input type="file">` swaps its whole selection on every visit, so picking three
+photos then reopening the picker to add two more silently dropped the first
+three — and an event import is rarely composed in one gesture. The pure helpers
+in `web/src/app/photo-selection.ts` own that: `addPhotos` appends and skips
+files already selected (identity = `name|size|lastModified`, a heuristic; the
+real guarantee stays the server's `event_images.content_hash`, which answers
+`duplicate` whatever the filename), and reports how many it skipped rather than
+silently swallowing them. Two details the component must keep: it resets
+`input.value` after each pick, or re-selecting a file just removed fires no
+`change` event; and it snapshots the files into `queuedFiles` at submit time, so
+the running queue can't follow a selection edited underneath it. Files over
+`MAX_IMAGE_SIZE_BYTES` (mirrored from `admin_events.py`) are flagged at
+selection time and block submit — a certain 413 is not worth discovering after
+several minutes of queue.
+
 **Import progress is driven client-side, one image per request.** The admin
 import route indexes synchronously and only answers once the whole batch is
 done, so sending the batch in a single multipart request gives the UI no

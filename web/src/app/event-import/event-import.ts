@@ -1,11 +1,12 @@
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
-import { Component, OnDestroy, signal } from '@angular/core';
+import { Component, OnDestroy, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 
 import { ImportProgress } from '../import-progress/import-progress';
 import { FaceEvent } from '../models/event.model';
 import { ImportItem, createImportItem, isTerminalStatus } from '../models/import-progress.model';
+import { SelectedPhoto, addPhotos, formatFileSize, totalSizeBytes } from '../photo-selection';
 import { AuthCredentialsService } from '../services/auth-credentials.service';
 import { EventImportService } from '../services/event-import.service';
 
@@ -27,7 +28,9 @@ export class EventImport implements OnDestroy {
   readonly events = signal<FaceEvent[]>([]);
   selectedEventId: number | null = null;
 
-  readonly selectedFiles = signal<File[]>([]);
+  /** Sélection cumulative : chaque passage par le sélecteur ajoute, ne remplace pas. */
+  readonly photos = signal<SelectedPhoto[]>([]);
+  readonly ignoredDuplicates = signal(0);
 
   readonly error = signal<string | null>(null);
   readonly resultEventId = signal<number | null>(null);
@@ -40,6 +43,8 @@ export class EventImport implements OnDestroy {
 
   private cancelling = false;
   private inFlight: Subscription | null = null;
+  /** Photos figées au lancement : la file ne doit pas suivre une sélection modifiée. */
+  private queuedFiles: File[] = [];
 
   constructor(
     private readonly eventImportService: EventImportService,
@@ -49,6 +54,18 @@ export class EventImport implements OnDestroy {
   ngOnDestroy(): void {
     this.inFlight?.unsubscribe();
   }
+
+  readonly totalSizeLabel = computed(() => formatFileSize(totalSizeBytes(this.photos())));
+
+  readonly oversizedCount = computed(() => this.photos().filter((photo) => photo.tooLarge).length);
+
+  /**
+   * Un fichier trop volumineux est un échec certain (413) : mieux vaut le
+   * retirer d'un clic que de le découvrir après plusieurs minutes de file.
+   */
+  readonly canSubmit = computed(
+    () => !this.running() && this.photos().length > 0 && this.oversizedCount() === 0,
+  );
 
   selectMode(mode: Mode): void {
     this.mode = mode;
@@ -68,23 +85,54 @@ export class EventImport implements OnDestroy {
 
   onFilesSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.selectedFiles.set(input.files ? Array.from(input.files) : []);
+    const picked = input.files ? Array.from(input.files) : [];
+    const result = addPhotos(this.photos(), picked);
+
+    this.photos.set(result.photos);
+    this.ignoredDuplicates.set(result.ignoredDuplicates);
+    this.error.set(null);
+
+    // Sans cette remise à zéro, resélectionner un fichier qu'on vient de retirer
+    // ne déclencherait aucun `change` : la valeur de l'input n'aurait pas changé.
+    input.value = '';
+  }
+
+  removePhoto(key: string): void {
+    this.photos.update((photos) => photos.filter((photo) => photo.key !== key));
+    this.ignoredDuplicates.set(0);
+  }
+
+  clearPhotos(): void {
+    this.photos.set([]);
+    this.ignoredDuplicates.set(0);
+  }
+
+  formatSize(bytes: number): string {
+    return formatFileSize(bytes);
   }
 
   onSubmit(): void {
-    const files = this.selectedFiles();
-    if (files.length === 0) {
-      this.error.set('Sélectionnez au moins une image.');
+    const photos = this.photos();
+    if (photos.length === 0) {
+      this.error.set('Ajoutez au moins une photo.');
       return;
     }
     if (this.mode === 'existing' && this.selectedEventId === null) {
       this.error.set('Choisissez un événement existant.');
       return;
     }
+    // Sans cette garde, un formulaire à moitié rempli crée un événement sans
+    // description ni date — l'API les accepte vides, et il reste ensuite dans
+    // le catalogue sans que rien ne permette de l'identifier.
+    if (this.mode === 'new' && !this.hasCompleteEventFields()) {
+      this.error.set("Renseignez la description, la date et l'adresse du nouvel événement.");
+      return;
+    }
 
     this.error.set(null);
     this.cancelling = false;
-    this.items.set(files.map(createImportItem));
+    this.queuedFiles = photos.map((photo) => photo.file);
+    this.items.set(this.queuedFiles.map(createImportItem));
     this.startedAt.set(Date.now());
     this.finishedAt.set(null);
     this.resultEventId.set(null);
@@ -97,9 +145,9 @@ export class EventImport implements OnDestroy {
 
     this.inFlight = this.eventImportService
       .createEvent(this.credentials.actorId, this.credentials.bearerToken, {
-        description: this.newDescription,
+        description: this.newDescription.trim(),
         event_date: this.newEventDate,
-        address: this.newAddress,
+        address: this.newAddress.trim(),
       })
       .subscribe({
         next: (event) => {
@@ -133,6 +181,14 @@ export class EventImport implements OnDestroy {
     this.finishRun();
   }
 
+  private hasCompleteEventFields(): boolean {
+    return (
+      this.newDescription.trim().length > 0 &&
+      this.newEventDate.length > 0 &&
+      this.newAddress.trim().length > 0
+    );
+  }
+
   private startQueue(eventId: number): void {
     this.resultEventId.set(eventId);
     this.processNext(eventId, 0);
@@ -144,8 +200,7 @@ export class EventImport implements OnDestroy {
    * (chargés une seule fois côté API) avec des requêtes concurrentes.
    */
   private processNext(eventId: number, index: number): void {
-    const files = this.selectedFiles();
-    if (this.cancelling || index >= files.length) {
+    if (this.cancelling || index >= this.queuedFiles.length) {
       this.finishRun();
       return;
     }
@@ -154,7 +209,12 @@ export class EventImport implements OnDestroy {
     this.patchItem(index, { status: 'uploading', uploadedRatio: 0 });
 
     this.inFlight = this.eventImportService
-      .uploadImage(this.credentials.actorId, this.credentials.bearerToken, eventId, files[index])
+      .uploadImage(
+        this.credentials.actorId,
+        this.credentials.bearerToken,
+        eventId,
+        this.queuedFiles[index],
+      )
       .subscribe({
         next: (event) => {
           if (event.type === HttpEventType.UploadProgress) {
