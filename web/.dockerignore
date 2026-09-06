@@ -1,0 +1,19 @@
+# Contexte de build de l'image web — le build se fait dans le conteneur,
+# rien de ce qui est produit ou installé localement ne doit y entrer.
+
+node_modules/
+dist/
+.angular/
+tmp/
+out-tsc/
+
+.git
+.gitignore
+.editorconfig
+.vscode/
+.idea/
+
+Dockerfile
+.dockerignore
+
+*.md
