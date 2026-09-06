@@ -34,6 +34,7 @@
       </p>
     }
 
+    @if (isEmpty()) { // desactive affichage image
     <!-- Figure principale : la question posée en premier, « combien d'images indexées ». -->
     <section class="card hero-card">
       <p class="micro-label">Images indexées</p>
@@ -111,7 +112,7 @@
         </p>
       }
     </section>
-
+    
     <!-- Workers : Redis enregistre des consommateurs, pas des processus. On
          parle donc d'activité (dernier sondage), jamais de « démarré ». -->
     @if (queue(); as q) {
@@ -198,7 +199,7 @@
         }
       </section>
     }
-
+    }
     <dl class="tiles">
       <div class="tile">
         <dt>Événements</dt>
