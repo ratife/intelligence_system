@@ -35,3 +35,15 @@ class TriggerIndexingCommand:
     """Intention de scanner les images en attente d'indexation et de les publier en file."""
 
     batch_limit: int = 500
+
+
+@dataclass(frozen=True, slots=True)
+class DetectQueryFacesCommand:
+    """Intention de lister les visages d'une image, sans lancer de recherche.
+
+    Pas d'`actor_id` : contrairement à `SearchByFaceCommand`, cette intention ne
+    consomme pas de quota et n'alimente pas le journal d'audit — elle ne consulte
+    aucune donnée indexée. L'authentification reste exigée par la route.
+    """
+
+    query_image_bytes: bytes

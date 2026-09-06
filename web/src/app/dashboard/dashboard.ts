@@ -2,16 +2,20 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, computed, signal } from '@angular/core';
 
 import { SystemStatistics } from '../models/statistics.model';
+import { QueueStatus } from '../models/workers.model';
 import { AuthCredentialsService } from '../services/auth-credentials.service';
 import { IndexingService } from '../services/indexing.service';
 import { StatisticsService } from '../services/statistics.service';
+import { WorkersService } from '../services/workers.service';
 
 /** Cadence de rafraîchissement pendant qu'une indexation est en cours. */
 const POLL_INTERVAL_MS = 2000;
 
 /**
- * Sans la moindre image traitée au bout de ce délai, on suspecte un worker
- * absent : la file se remplit mais personne ne la consomme.
+ * Délai de repli avant de suspecter un worker absent.
+ *
+ * La file elle-même répond à la question (`is_stalled`), et bien plus vite. Ce
+ * délai ne sert que si la supervision de file est indisponible.
  */
 const NO_PROGRESS_WARNING_MS = 15000;
 
@@ -44,9 +48,13 @@ export class Dashboard implements OnDestroy {
   private pendingAtTrigger = 0;
   private watchStartedMs = 0;
 
+  /** État de la file d'indexation et de ses consommateurs. */
+  readonly queue = signal<QueueStatus | null>(null);
+
   constructor(
     private readonly statisticsService: StatisticsService,
     private readonly indexingService: IndexingService,
+    private readonly workersService: WorkersService,
     private readonly credentials: AuthCredentialsService,
   ) {
     this.refresh();
@@ -143,7 +151,16 @@ export class Dashboard implements OnDestroy {
     this.pollId = setInterval(() => this.pollOnce(), POLL_INTERVAL_MS);
   }
 
+  /** L'échec du chargement de la file n'empêche pas d'afficher les statistiques. */
+  private loadQueue(): void {
+    this.workersService.load(this.credentials.actorId, this.credentials.bearerToken).subscribe({
+      next: (queue) => this.queue.set(queue),
+      error: () => this.queue.set(null),
+    });
+  }
+
   private pollOnce(): void {
+    this.loadQueue();
     this.statisticsService.load(this.credentials.actorId, this.credentials.bearerToken).subscribe({
       next: (stats) => {
         this.stats.set(stats);
@@ -153,7 +170,14 @@ export class Dashboard implements OnDestroy {
           this.stopWatching();
           return;
         }
-        // Rien de consommé passé le délai : la file se remplit sans consommateur.
+        // La supervision de file tranche directement : du retard et aucun
+        // consommateur actif, c'est un worker à démarrer, pas une lenteur.
+        if (this.queue()?.is_stalled === true) {
+          this.workerSuspected.set(true);
+          this.stopWatching();
+          return;
+        }
+        // Repli si la supervision est indisponible : rien consommé passé le délai.
         const stalled = stats.pending_image_count >= this.pendingAtTrigger;
         if (stalled && Date.now() - this.watchStartedMs > NO_PROGRESS_WARNING_MS) {
           this.workerSuspected.set(true);
@@ -168,6 +192,7 @@ export class Dashboard implements OnDestroy {
   refresh(): void {
     this.loading.set(true);
     this.error.set(null);
+    this.loadQueue();
 
     this.statisticsService.load(this.credentials.actorId, this.credentials.bearerToken).subscribe({
       next: (stats) => {
@@ -201,6 +226,20 @@ export class Dashboard implements OnDestroy {
 
   formatDecimal(value: number): string {
     return value.toFixed(2).replace('.', ',');
+  }
+
+  /** Durées d'inactivité : lisibles d'un coup d'œil, de la seconde à l'heure. */
+  formatIdle(seconds: number): string {
+    if (seconds < 60) {
+      return `${Math.round(seconds)} s`;
+    }
+    if (seconds < 3600) {
+      return `${Math.round(seconds / 60)} min`;
+    }
+    if (seconds < 86400) {
+      return `${Math.round(seconds / 3600)} h`;
+    }
+    return `${Math.round(seconds / 86400)} j`;
   }
 
   formatTime(date: Date): string {

@@ -2,14 +2,23 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import date
 
 from pydantic import BaseModel
 
+from facereco.domain.entities.face import DetectedFace
 from facereco.domain.entities.search import SearchResult
 
 
-class FaceUsedSchema(BaseModel):
+class QueryFaceSchema(BaseModel):
+    """Un visage détecté dans l'image requête, situable dans l'image par son cadre.
+
+    `bbox` est en pixels de l'image décodée, `[x, y, largeur, hauteur]` — c'est ce
+    qui permet à un client de dessiner le cadre et de rendre `index` intelligible
+    pour un humain, au lieu d'un simple numéro.
+    """
+
     index: int
     bbox: list[int]
     quality: float
@@ -17,8 +26,15 @@ class FaceUsedSchema(BaseModel):
 
 class QuerySchema(BaseModel):
     faces_detected: int
-    face_used: FaceUsedSchema
+    face_used: QueryFaceSchema
     model_version: str
+
+
+class QueryFacesResponseSchema(BaseModel):
+    """Réponse de la détection préalable — aucune recherche n'a été effectuée."""
+
+    faces_detected: int
+    faces: list[QueryFaceSchema]
 
 
 class EvidenceSchema(BaseModel):
@@ -44,12 +60,27 @@ class SearchResponseSchema(BaseModel):
     results: list[EventMatchSchema]
 
 
+def to_query_faces_response(faces: Sequence[DetectedFace]) -> QueryFacesResponseSchema:
+    """L'index exposé est la position dans la liste du détecteur — celle qu'attend `face_index`."""
+    return QueryFacesResponseSchema(
+        faces_detected=len(faces),
+        faces=[
+            QueryFaceSchema(
+                index=index,
+                bbox=list(face.bbox.as_tuple()),
+                quality=face.detection_score,
+            )
+            for index, face in enumerate(faces)
+        ],
+    )
+
+
 def to_search_response(result: SearchResult, evidence_urls: dict[int, str]) -> SearchResponseSchema:
     """Traduit le SearchResult du Domain en schema HTTP, en résolvant les URLs signées."""
     return SearchResponseSchema(
         query=QuerySchema(
             faces_detected=result.query_info.faces_detected,
-            face_used=FaceUsedSchema(
+            face_used=QueryFaceSchema(
                 index=result.query_info.face_used_index,
                 bbox=list(result.query_info.face_used_bbox.as_tuple()),
                 quality=result.query_info.face_used_quality,

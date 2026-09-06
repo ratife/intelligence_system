@@ -56,16 +56,10 @@ class SearchByFaceUseCase:
         self._ann_top_k = ann_top_k
 
     def execute(self, command: SearchByFaceCommand) -> SearchResult:
-
-        print(f"Executing search for actor {command.actor_id} with limit {command.limit}.")
-
         if not self._quota.check_and_consume(command.actor_id):
             raise SearchQuotaExceededError(command.actor_id)
 
         faces = self._face_detector.detect_faces(command.query_image_bytes)
-
-        print(f"Detected {len(faces)} faces in the query image for actor {command.actor_id}.")
-        
         if not faces:
             raise NoFaceDetectedError()
 
@@ -86,7 +80,6 @@ class SearchByFaceUseCase:
             date_from=command.date_from,
             date_to=command.date_to,
         )
-        print(f"Found {len(hits)} hits in ANN search for actor {command.actor_id}.")
         qualifying_hits = [hit for hit in hits if hit.similarity >= threshold_used]
 
         events_by_id = self._event_repository.get_events_by_ids(

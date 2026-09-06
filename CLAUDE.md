@@ -136,7 +136,17 @@ event (`domain/services/event_scoring.py`) → audit log → return with evidenc
 
 - If more than one face is detected and the caller didn't pass `face_index`,
   the use case raises `AmbiguousFaceSelectionError` rather than guessing —
-  callers must disambiguate explicitly.
+  callers must disambiguate explicitly. `POST /api/v1/search/faces`
+  (`DetectQueryFacesUseCase`) is what makes that demand answerable: it returns
+  every detected face's bbox and index so a caller can *see* what index 2 is
+  before naming it. It deliberately stays out of the search pipeline — no
+  quota (nothing is queried, and spending the operator's search budget just to
+  draw boxes would be wrong), no audit entry (ADR 008 covers searches, not
+  detections), no quality gate (that gate is an indexing rule; showing a
+  « rejected » verdict here would imply a barrier search doesn't have). It uses
+  the same shared `FaceDetectorPort`, so the boxes shown are the ones search
+  will use — an image with no face returns an empty list rather than 409,
+  since « what is in this image » has « nothing » as a valid answer.
 - Event aggregation score = `max(similarity) + λ·log(1 + match_count)`
   (`DEFAULT_CORROBORATION_LAMBDA = 0.02`). Max alone is too sensitive to a
   single false positive; averaging dilutes the signal on high-face-count
@@ -185,7 +195,8 @@ with Angular CLI 21, 2025 file-naming style: `search.ts`/`.html`/`.css`, no
 `.component.` infix). Three tabs, toggled in `app.ts` via a plain signal (no
 Angular Router — `ng new` was run with `--routing=false`): **Tableau de bord**
 (`dashboard/`, `GET /api/v1/stats` — the default tab), **Recherche**
-(`search/`, `POST /api/v1/search/by-face`) and **Importer un événement**
+(`search/`, `POST /api/v1/search/faces` then `POST /api/v1/search/by-face`)
+and **Importer un événement**
 (`event-import/`, the `admin_events` routes below). `src/app/models/*.model.ts`
 mirror the backend's Pydantic schemas field-for-field by hand (no codegen
 wired up) — update both sides together when a schema changes. The FastAPI app
@@ -193,6 +204,38 @@ has `CORSMiddleware` configured via
 `settings.cors_allowed_origins` (defaults to `http://localhost:4200`)
 specifically so this dev server can call it; keep that setting in sync if the
 frontend's origin/port changes.
+
+**Faces are shown, never just numbered or scored.** Two presentational
+components carry this, both under `web/src/app/`:
+
+- `face-frame/` — an image plus its face boxes. Boxes arrive in *image pixels*
+  and are converted to percentages of the natural dimensions, so they survive
+  any display size. Two things it must keep doing: its wrapper is
+  `inline-block` so it hugs the image exactly (letterboxing would shift every
+  box), and each measurement is stored **with the `src` that produced it**, so
+  switching photos can't paint new boxes onto the previous image's dimensions.
+  No EXIF correction is applied or needed — OpenCV (detection side, verified on
+  cv2 5.0) and browsers both apply EXIF orientation, so the two coordinate
+  frames already agree. Note `_image_size()` in `devtools/event_import.py` does
+  *not*: it reads PIL's raw size, so `event_images.width/height` is wrong for
+  rotated photos — don't build overlays on those columns.
+- `face-crop/` — a square close-up on one face, done by scaling and offsetting
+  the same (already cached) image inside a fixed window, no server-side crop.
+  It exists because a 150px face in a 4000px photo renders ~10px wide in a card:
+  the frame answers *where*, the crop answers *who*, and only the second makes
+  a similarity score checkable by a human.
+
+`search/` uses both. Picking a file triggers detection immediately, so the
+photo comes back with every face framed; with more than one face the operator
+**clicks** the one to search (the old free-text "Index de visage" field is
+gone — it asked for a number nothing on screen explained, and a group photo
+was otherwise a dead end at 409). Badges read `#0`, `#1` — the API's own
+`face_index`, with `#` marking it as an identifier rather than a rank; don't
+renumber them 1-based, the audit log and the API speak the 0-based one.
+Changing the selected face clears the previous results, which described a
+different person. If detection is unreachable the search stays available (the
+API will arbitrate) and the used face is still framed afterwards from
+`query.face_used`.
 
 **Styling goes through a shared design system, not per-component CSS.**
 `web/src/styles.css` holds the design tokens (surfaces, one ink per role,
@@ -289,6 +332,34 @@ preserve:
   down (`make worker`, or `make start`). Without that, the queue fills silently
   and the user waits forever. Re-triggering is safe — indexing is idempotent on
   `(image_id, model_version, face_index)`.
+
+### Worker supervision (`GET /api/v1/admin/workers`)
+
+Shown as a card on the **Tableau de bord**. Same read-port shape as the stats
+endpoint: `QueueMonitorPort` (`domain/ports/queue_monitor.py`) →
+`GetIndexingQueueStatusUseCase` → `RedisQueueMonitor`
+(`infrastructure/messaging/redis_queue_monitor.py`, using `XINFO GROUPS` /
+`XINFO CONSUMERS` / `XLEN`). It is deliberately kept apart from
+`MessageQueuePort`, which the pipeline depends on to publish/read/ack — that
+contract has no business carrying introspection methods.
+
+**Redis registers consumers, not processes.** A consumer entry outlives the
+worker that created it and carries no liveness flag; the only signal is
+activity. So the vocabulary is `is_active` (polled recently — threshold
+`ACTIVE_IDLE_THRESHOLD_SECONDS`, 30s) and never "running", and the UI says
+"silencieux", explaining that this is either a dead process or a live one with
+nothing to do. A killed worker keeps showing as active until the threshold
+elapses; that lag is inherent, not a bug.
+
+`is_stalled` (backlog > 0 with no active consumer) is the one actionable
+diagnostic — it replaced the dashboard's earlier "pending hasn't moved in 15s"
+heuristic, which is now only a fallback if this endpoint is unreachable.
+
+**Each worker derives a unique consumer name** (`<host>-<pid>`,
+`default_consumer_name()` in `interface/worker/indexing_worker.py`). The name
+used to be hardcoded, so every process registered as the same consumer: they
+were indistinguishable in supervision and, worse, reclaimed each other's
+in-flight messages through `XAUTOCLAIM`, re-processing images already taken.
 
 ### Dashboard read model (`GET /api/v1/stats`)
 

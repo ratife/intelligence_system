@@ -8,6 +8,8 @@ corrompue ne doit jamais bloquer indéfiniment le traitement du lot.
 from __future__ import annotations
 
 import logging
+import os
+import socket
 import time
 
 import redis
@@ -60,7 +62,19 @@ def _process_one(
         )
 
 
-def run_worker(consumer_name: str = "indexing-worker-1") -> None:
+def default_consumer_name() -> str:
+    """Nom unique par processus : `<hôte>-<pid>`.
+
+    Redis Streams identifie un consommateur par son nom. Deux processus portant
+    le même nom sont vus comme un seul : indiscernables dans la supervision, et
+    surtout ils se réclament mutuellement leurs messages en cours via
+    `XAUTOCLAIM`, ce qui fait retraiter des images déjà prises en charge.
+    """
+    return f"{socket.gethostname()}-{os.getpid()}"
+
+
+def run_worker(consumer_name: str | None = None) -> None:
+    consumer_name = consumer_name or default_consumer_name()
     redis_client = redis.Redis.from_url(settings.redis_url, decode_responses=True)
     queue = RedisStreamsQueue(
         client=redis_client,

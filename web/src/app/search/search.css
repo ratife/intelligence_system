@@ -42,6 +42,39 @@
   max-width: 62ch;
 }
 
+/* --- Photo requête : ce qui va être cherché, avant de le chercher ---------- */
+
+.query-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-md);
+}
+
+.query-preview app-face-frame {
+  --frame-max-height: 360px;
+}
+
+.query-preview .alert,
+.query-preview .note {
+  margin: 0;
+  max-width: 62ch;
+}
+
+.preview-caption {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  max-width: 62ch;
+}
+
+.preview-caption .quality {
+  color: var(--text-muted);
+}
+
 /* --- Bandeau de contexte de la requête ------------------------------------ */
 
 .query-info {
@@ -69,12 +102,14 @@
 
 .results {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--space-5);
   margin-top: var(--space-5);
 }
 
 .result {
+  display: flex;
+  flex-direction: column;
   background: var(--surface);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -86,12 +121,18 @@
   box-shadow: var(--shadow-raised);
 }
 
-.result img {
-  width: 100%;
-  height: 180px;
-  object-fit: cover;
-  display: block;
+/* La photo garde ses proportions : recadrée en `cover`, le cadre du visage ne
+   tomberait plus au bon endroit — c'est toute la valeur de la preuve. */
+.result-media {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-3);
   background: var(--surface-sunken);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.result-media app-face-frame {
+  --frame-max-height: 200px;
 }
 
 .result-body {
@@ -105,9 +146,28 @@
 }
 
 .result .meta {
-  margin: 0 0 var(--space-3);
+  margin: 0;
   color: var(--text-muted);
   font-size: 0.85rem;
+}
+
+/* Le gros plan répond à « qui ? » là où le cadre répond à « où ? » : les deux
+   accompagnent le score, jamais le score seul. */
+.evidence {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--hairline);
+}
+
+.evidence app-face-crop {
+  --crop-size: 68px;
+}
+
+.evidence-scores {
+  min-width: 0;
 }
 
 .result .confidence {
@@ -122,5 +182,12 @@
 .result .confidence b {
   font-size: 1.05rem;
   color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.result .similarity {
+  margin: var(--space-1) 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }

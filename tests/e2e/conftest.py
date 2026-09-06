@@ -32,6 +32,7 @@ from tests.unit.application.fakes import DeterministicFaceEmbedder, ScriptedFace
 
 MIGRATIONS_FILE = Path(__file__).resolve().parents[2] / "migrations" / "0001_init.sql"
 ACTOR_HEADERS = {"Authorization": f"Bearer {settings.api_bearer_token}", "X-Actor-Id": "e2e-test"}
+GROUP_PHOTO_BYTES = b"group-photo-bytes"
 
 
 class InMemoryObjectStorage(ObjectStoragePort):
@@ -76,6 +77,7 @@ def test_app(postgres_container, monkeypatch) -> Iterator[FastAPI]:
     register_error_handlers(app)
 
     query_image = b"query-image-bytes"
+    landmarks = ((30.0, 40.0), (70.0, 40.0), (50.0, 60.0), (35.0, 80.0), (65.0, 80.0))
     faces_by_image = {
         query_image: [
             DetectedFace(
@@ -83,9 +85,27 @@ def test_app(postgres_container, monkeypatch) -> Iterator[FastAPI]:
                 detection_score=0.95,
                 sharpness=120.0,
                 yaw_degrees=0.0,
-                landmarks=((30.0, 40.0), (70.0, 40.0), (50.0, 60.0), (35.0, 80.0), (65.0, 80.0)),
+                landmarks=landmarks,
             )
-        ]
+        ],
+        # Photo de groupe : le cas qui rend la recherche ambiguë, et pour lequel
+        # l'interface a besoin des cadres afin qu'un humain désigne un visage.
+        GROUP_PHOTO_BYTES: [
+            DetectedFace(
+                bbox=BoundingBox(x=10, y=20, width=100, height=100),
+                detection_score=0.95,
+                sharpness=120.0,
+                yaw_degrees=0.0,
+                landmarks=landmarks,
+            ),
+            DetectedFace(
+                bbox=BoundingBox(x=300, y=40, width=80, height=80),
+                detection_score=0.62,
+                sharpness=90.0,
+                yaw_degrees=5.0,
+                landmarks=landmarks,
+            ),
+        ],
     }
     app.state.face_detector = ScriptedFaceDetector(faces_by_image)
     app.state.face_embedder = DeterministicFaceEmbedder(version="arcface-r100-v1")

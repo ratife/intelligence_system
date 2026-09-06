@@ -222,3 +222,96 @@
   gap: var(--space-1);
   margin: 0;
 }
+
+/* --- Workers ---------------------------------------------------------------- */
+
+.workers-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+.workers-header h2 {
+  margin: 0;
+}
+
+.workers-tiles {
+  margin-bottom: var(--space-4);
+}
+
+.tile dd.value-alert {
+  color: var(--critical);
+}
+
+.worker-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.worker-table th,
+.worker-table td {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.worker-table th {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.worker-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.worker-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.row-idle {
+  color: var(--text-muted);
+}
+
+/* Statut jamais porté par la couleur seule : icône + libellé accompagnent la pastille. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.chip-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.chip.tone-good {
+  background: rgba(12, 163, 12, 0.1);
+}
+.chip.tone-good .chip-icon {
+  color: var(--good);
+}
+.chip.tone-accent {
+  background: var(--accent-soft);
+}
+.chip.tone-accent .chip-icon {
+  color: var(--accent);
+}
+.chip.tone-muted .chip-icon {
+  color: var(--text-muted);
+}

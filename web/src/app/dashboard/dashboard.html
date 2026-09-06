@@ -112,6 +112,93 @@
       }
     </section>
 
+    <!-- Workers : Redis enregistre des consommateurs, pas des processus. On
+         parle donc d'activité (dernier sondage), jamais de « démarré ». -->
+    @if (queue(); as q) {
+      <section class="card workers">
+        <header class="workers-header">
+          <h2>Workers d'indexation</h2>
+          <span class="micro-label">groupe {{ q.consumer_group }}</span>
+        </header>
+
+        @if (q.is_stalled) {
+          <p class="alert alert--error" role="alert">
+            <b>{{ q.backlog }} message(s) en attente et aucun consommateur actif.</b>
+            La file se remplit sans que personne ne la traite — lancez un worker avec
+            <code>make worker</code>, ou <code>make start</code> qui démarre tout.
+          </p>
+        }
+
+        <dl class="tiles workers-tiles">
+          <div class="tile">
+            <dt>Consommateurs actifs</dt>
+            <dd>{{ q.active_worker_count }}</dd>
+          </div>
+          <div class="tile">
+            <dt>Messages en attente</dt>
+            <dd>{{ q.backlog }}</dd>
+          </div>
+          <div class="tile">
+            <dt>Rebuts (DLQ)</dt>
+            <dd [class.value-alert]="q.dead_letter_messages > 0">{{ q.dead_letter_messages }}</dd>
+          </div>
+        </dl>
+
+        @if (q.workers.length > 0) {
+          <table class="worker-table">
+            <thead>
+              <tr>
+                <th scope="col">Consommateur</th>
+                <th scope="col">État</th>
+                <th scope="col" class="num">En cours</th>
+                <th scope="col" class="num">Dernier sondage</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (worker of q.workers; track worker.name) {
+                <tr [class.row-idle]="!worker.is_active">
+                  <td class="worker-name">{{ worker.name }}</td>
+                  <td>
+                    @if (worker.is_working) {
+                      <span class="chip tone-accent">
+                        <span class="chip-icon" aria-hidden="true">◍</span> Traite
+                      </span>
+                    } @else if (worker.is_active) {
+                      <span class="chip tone-good">
+                        <span class="chip-icon" aria-hidden="true">✓</span> En attente
+                      </span>
+                    } @else {
+                      <span class="chip tone-muted">
+                        <span class="chip-icon" aria-hidden="true">–</span> Silencieux
+                      </span>
+                    }
+                  </td>
+                  <td class="num">{{ worker.pending_messages }}</td>
+                  <td class="num">{{ formatIdle(worker.idle_seconds) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+
+          <p class="note">
+            Un consommateur « silencieux » n'a pas sondé la file récemment. Redis conserve son
+            entrée après l'arrêt du processus : c'est soit un worker éteint, soit un worker vivant
+            sans travail — la file ne permet pas de trancher.
+          </p>
+        } @else {
+          <p class="note">Aucun consommateur enregistré : aucun worker n'a encore lu cette file.</p>
+        }
+
+        @if (q.dead_letter_messages > 0) {
+          <p class="note warn">
+            <span aria-hidden="true">⚠</span> {{ q.dead_letter_messages }} message(s) abandonné(s)
+            après épuisement des tentatives. Ces images ne seront pas réessayées seules ; relancer
+            l'indexation les remet en file.
+          </p>
+        }
+      </section>
+    }
+
     <dl class="tiles">
       <div class="tile">
         <dt>Événements</dt>
