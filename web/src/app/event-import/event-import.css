@@ -172,3 +172,56 @@
   cursor: not-allowed;
   opacity: 0.4;
 }
+
+/* --- Zone de dépôt -------------------------------------------------------- */
+
+/* Le trait discontinu est l'affordance : il annonce une cible de dépôt là où un
+   champ plein annoncerait une saisie. */
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+  text-align: center;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+/* Survol d'un dépôt : la cible doit se distinguer sans ambiguïté, sinon on ne
+   sait pas si le lâcher sera pris en compte. */
+.dropzone--active {
+  border-color: var(--accent);
+  border-style: solid;
+  background: var(--accent-soft);
+}
+
+.dropzone-title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+}
+
+.dropzone-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  max-width: 60ch;
+}
+
+/* Le sélecteur reste le chemin clavier : un dépôt ne s'atteint pas au clavier. */
+.dropzone .file-field {
+  flex: none;
+  align-items: center;
+}
+
+.dropzone-or {
+  font-weight: 400;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}

@@ -60,23 +60,39 @@
       </fieldset>
     }
 
-    <fieldset class="photo-field">
+    <fieldset
+      class="photo-field"
+      (dragenter)="onDragEnter($event)"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDrop($event)"
+    >
       <legend>Photos de l'événement</legend>
 
-      <label class="file-field">
-        Ajouter des photos
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          [disabled]="running()"
-          (change)="onFilesSelected($event)"
-        />
-      </label>
-      <p class="note">
-        Sélectionnez-en plusieurs à la fois, et revenez autant de fois que nécessaire : chaque
-        passage <strong>s'ajoute</strong> à la liste au lieu de la remplacer.
-      </p>
+      <div class="dropzone" [class.dropzone--active]="dragging()">
+        <p class="dropzone-title">
+          <span aria-hidden="true">⤓</span>
+          Glissez vos photos ici — un dossier entier fonctionne aussi
+        </p>
+        <label class="file-field">
+          <span class="dropzone-or">ou choisissez-les sur votre disque</span>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            [disabled]="running()"
+            (change)="onFilesSelected($event)"
+          />
+        </label>
+        <p class="dropzone-hint">
+          Sélectionnez-en plusieurs à la fois, et revenez autant de fois que nécessaire : chaque
+          dépôt <strong>s'ajoute</strong> à la liste au lieu de la remplacer.
+        </p>
+      </div>
+
+      @if (readingDrop()) {
+        <p class="note">Lecture des fichiers déposés…</p>
+      }
 
       @if (photos().length > 0) {
         <div class="selection-head">
@@ -115,6 +131,12 @@
         @if (ignoredDuplicates() > 0) {
           <p class="note">
             {{ ignoredDuplicates() }} photo(s) déjà présente(s) dans la liste, ignorée(s).
+          </p>
+        }
+
+        @if (ignoredNonImages() > 0) {
+          <p class="note">
+            {{ ignoredNonImages() }} fichier(s) ignoré(s) : ce ne sont pas des images.
           </p>
         }
 

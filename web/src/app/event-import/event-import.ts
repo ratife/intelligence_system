@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 
 import { ImportProgress } from '../import-progress/import-progress';
 import { FaceEvent } from '../models/event.model';
+import { filesFromDrop } from '../dropped-files';
 import { ImportItem, createImportItem, isTerminalStatus } from '../models/import-progress.model';
 import { SelectedPhoto, addPhotos, formatFileSize, totalSizeBytes } from '../photo-selection';
 import { AuthCredentialsService } from '../services/auth-credentials.service';
@@ -31,6 +32,12 @@ export class EventImport implements OnDestroy {
   /** Sélection cumulative : chaque passage par le sélecteur ajoute, ne remplace pas. */
   readonly photos = signal<SelectedPhoto[]>([]);
   readonly ignoredDuplicates = signal(0);
+  readonly ignoredNonImages = signal(0);
+
+  /** Un dépôt est en cours au-dessus de la zone. */
+  readonly dragging = signal(false);
+  /** Parcours d'un dossier déposé : cela peut prendre un instant sur un gros dossier. */
+  readonly readingDrop = signal(false);
 
   readonly error = signal<string | null>(null);
   readonly resultEventId = signal<number | null>(null);
@@ -43,17 +50,34 @@ export class EventImport implements OnDestroy {
 
   private cancelling = false;
   private inFlight: Subscription | null = null;
+  /** Compteur d'entrées/sorties : survoler un enfant déclenche un `dragleave` parasite. */
+  private dragDepth = 0;
   /** Photos figées au lancement : la file ne doit pas suivre une sélection modifiée. */
   private queuedFiles: File[] = [];
 
   constructor(
     private readonly eventImportService: EventImportService,
     private readonly credentials: AuthCredentialsService,
-  ) {}
+  ) {
+    document.addEventListener('dragover', this.blockStrayDrop);
+    document.addEventListener('drop', this.blockStrayDrop);
+  }
 
   ngOnDestroy(): void {
     this.inFlight?.unsubscribe();
+    document.removeEventListener('dragover', this.blockStrayDrop);
+    document.removeEventListener('drop', this.blockStrayDrop);
   }
+
+  /**
+   * Un dépôt manqué à côté de la zone ferait ouvrir l'image par le navigateur,
+   * et le formulaire en cours de saisie serait perdu avec la page.
+   */
+  private readonly blockStrayDrop = (event: DragEvent): void => {
+    if (event.dataTransfer?.types.includes('Files')) {
+      event.preventDefault();
+    }
+  };
 
   readonly totalSizeLabel = computed(() => formatFileSize(totalSizeBytes(this.photos())));
 
@@ -64,7 +88,11 @@ export class EventImport implements OnDestroy {
    * retirer d'un clic que de le découvrir après plusieurs minutes de file.
    */
   readonly canSubmit = computed(
-    () => !this.running() && this.photos().length > 0 && this.oversizedCount() === 0,
+    () =>
+      !this.running() &&
+      !this.readingDrop() &&
+      this.photos().length > 0 &&
+      this.oversizedCount() === 0,
   );
 
   selectMode(mode: Mode): void {
@@ -85,26 +113,90 @@ export class EventImport implements OnDestroy {
 
   onFilesSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const picked = input.files ? Array.from(input.files) : [];
-    const result = addPhotos(this.photos(), picked);
-
-    this.photos.set(result.photos);
-    this.ignoredDuplicates.set(result.ignoredDuplicates);
-    this.error.set(null);
+    this.addFiles(input.files ? Array.from(input.files) : []);
 
     // Sans cette remise à zéro, resélectionner un fichier qu'on vient de retirer
     // ne déclencherait aucun `change` : la valeur de l'input n'aurait pas changé.
     input.value = '';
   }
 
+  onDragEnter(event: DragEvent): void {
+    if (!this.acceptsDrop(event)) {
+      return;
+    }
+    event.preventDefault();
+    this.dragDepth += 1;
+    this.dragging.set(true);
+  }
+
+  onDragOver(event: DragEvent): void {
+    if (!this.acceptsDrop(event)) {
+      return;
+    }
+    // Sans ce `preventDefault`, le navigateur refuse le dépôt : c'est lui qui
+    // déclare la zone réceptive.
+    event.preventDefault();
+    if (event.dataTransfer !== null) {
+      event.dataTransfer.dropEffect = 'copy';
+    }
+  }
+
+  onDragLeave(event: DragEvent): void {
+    if (!this.acceptsDrop(event)) {
+      return;
+    }
+    this.dragDepth = Math.max(0, this.dragDepth - 1);
+    if (this.dragDepth === 0) {
+      this.dragging.set(false);
+    }
+  }
+
+  onDrop(event: DragEvent): void {
+    if (!this.acceptsDrop(event)) {
+      return;
+    }
+    event.preventDefault();
+    this.dragDepth = 0;
+    this.dragging.set(false);
+
+    const dataTransfer = event.dataTransfer;
+    if (dataTransfer === null) {
+      return;
+    }
+    this.readingDrop.set(true);
+    filesFromDrop(dataTransfer)
+      .then((files) => this.addFiles(files))
+      .catch(() => this.error.set("Les fichiers déposés n'ont pas pu être lus."))
+      .finally(() => this.readingDrop.set(false));
+  }
+
+  /** Ne réagir qu'à un dépôt de fichiers : glisser du texte ne doit rien allumer. */
+  private acceptsDrop(event: DragEvent): boolean {
+    return !this.running() && (event.dataTransfer?.types.includes('Files') ?? false);
+  }
+
+  /** Chemin unique du sélecteur et du dépôt : mêmes règles de tri pour les deux. */
+  private addFiles(files: File[]): void {
+    const result = addPhotos(this.photos(), files);
+    this.photos.set(result.photos);
+    this.ignoredDuplicates.set(result.ignoredDuplicates);
+    this.ignoredNonImages.set(result.ignoredNonImages);
+    this.error.set(null);
+  }
+
   removePhoto(key: string): void {
     this.photos.update((photos) => photos.filter((photo) => photo.key !== key));
-    this.ignoredDuplicates.set(0);
+    this.clearSelectionNotices();
   }
 
   clearPhotos(): void {
     this.photos.set([]);
+    this.clearSelectionNotices();
+  }
+
+  private clearSelectionNotices(): void {
     this.ignoredDuplicates.set(0);
+    this.ignoredNonImages.set(0);
   }
 
   formatSize(bytes: number): string {

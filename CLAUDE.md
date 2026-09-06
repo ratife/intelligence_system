@@ -300,6 +300,22 @@ written from a `.subscribe()`/`.then()` callback must be a signal; state only
 ever mutated synchronously from a template event handler can stay a plain
 field.
 
+**Photos can be dropped, folders included.** The drop zone lives on the photo
+fieldset (`event-import/`), and `dropped-files.ts` turns a `DataTransfer` into a
+flat file list. Two properties of that API decide the shape of that module:
+entries must be collected **synchronously** in the handler — the `DataTransfer`
+is emptied as soon as it returns, so any `await` before the collection loses the
+drop — and `readEntries` yields **one batch at a time** (100 on Chromium), so a
+300-photo folder silently delivers 100 without the re-read loop. Directory
+recursion is depth-capped, an unreadable file is skipped rather than fatal, and
+where `webkitGetAsEntry` is missing it falls back to `DataTransfer.files`.
+A drop is not filtered by `accept="image/*"`, so `addPhotos` does the sorting for
+both paths (MIME type, extension as fallback when a dropped file carries none)
+and reports what it discarded. The component also blocks stray drops on the
+document: missing the zone would otherwise make the browser open the image and
+take the half-filled form with it. The file input stays — a drop zone has no
+keyboard path.
+
 **The photo selection accumulates; it does not replace.** A native
 `<input type="file">` swaps its whole selection on every visit, so picking three
 photos then reopening the picker to add two more silently dropped the first
