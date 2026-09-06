@@ -128,3 +128,37 @@ def test_statistics_requires_authentication(client) -> None:
     )
 
     assert response.status_code == 401
+
+
+def test_a_face_discarded_several_times_is_counted_once(seeded, client) -> None:
+    """`rejected_faces` accumule des doublons ; le taux de rejet ne doit pas les suivre.
+
+    La table n'a pas de contrainte d'unicité, et une image dont tous les visages
+    ont été écartés reste éligible à l'indexation (aucune empreinte pour la
+    version de modèle courante) : chaque relance y réinsère les mêmes rejets.
+    Sur les données de développement, cela gonflait le compteur d'un facteur
+    3,75 — soit 91 % de rejet affiché pour 74 % réels, sur l'indicateur qui sert
+    précisément à régler les seuils du filtre qualité (§6.1).
+    """
+    from facereco.infrastructure.db.session import SessionFactory
+
+    session = SessionFactory()
+    try:
+        # Le visage (2, 1) est déjà écarté une fois par le jeu de données.
+        session.execute(
+            text(
+                "INSERT INTO rejected_faces (image_id, face_index, rejection_reason, created_at) "
+                "VALUES (2, 1, 'visage_trop_petit', now()), "
+                "(2, 1, 'visage_trop_petit', now())"
+            )
+        )
+        session.commit()
+    finally:
+        session.close()
+
+    body = client.get(STATS_URL, headers=ACTOR_HEADERS).json()
+
+    assert body["rejected_face_count"] == 1
+    assert body["rejections_by_reason"] == [{"reason": "visage_trop_petit", "count": 1}]
+    # 3 visages retenus + 1 écarté : le taux ne bouge pas malgré les 3 lignes.
+    assert body["quality_rejection_rate"] == pytest.approx(0.25)

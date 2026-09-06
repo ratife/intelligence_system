@@ -394,6 +394,17 @@ filler: `quality_rejection_rate` + `rejections_by_reason` make the quality gate
 (§6.1) tunable, and `empty_search_rate` + `average_top_score` are the first
 signals on the uncalibrated 0.38 similarity threshold (§10.2).
 
+**`rejected_face_count` counts distinct `(image_id, face_index)`, not rows.**
+`rejected_faces` has no unique constraint, and an image whose faces were *all*
+discarded stays eligible for indexing (it has no embedding for the current model
+version, so `list_images_needing_indexing` re-selects it) — every re-run
+re-inserts the same rejections. Counting rows inflated the rate by 3.75× on the
+dev data (91% shown for 74% real), on the very indicator meant to tune the gate.
+`rejections_by_reason` dedupes the same way, keeping each face's *earliest*
+reason, so the reasons still sum to the total. This is a read-side fix, not a
+repair: the duplication in the table remains to be dealt with (a unique
+constraint, or a status distinguishing "no face kept" from "to index").
+
 ## Testing conventions
 
 - `tests/unit`: pure Domain/Application, fakes only (see
