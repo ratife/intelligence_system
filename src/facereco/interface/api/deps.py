@@ -15,14 +15,17 @@ from fastapi import Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from facereco.application.use_cases.detect_query_faces import DetectQueryFacesUseCase
+from facereco.application.use_cases.get_event_detail import GetEventDetailUseCase
 from facereco.application.use_cases.get_indexing_queue_status import (
     GetIndexingQueueStatusUseCase,
 )
 from facereco.application.use_cases.get_system_statistics import GetSystemStatisticsUseCase
 from facereco.application.use_cases.index_event_images import TriggerIndexingUseCase
+from facereco.application.use_cases.list_events import ListEventsUseCase
 from facereco.application.use_cases.process_image_message import ProcessImageMessageUseCase
 from facereco.application.use_cases.search_by_face import SearchByFaceUseCase
 from facereco.domain.ports.audit_log import AuditLogPort
+from facereco.domain.ports.event_catalog import EventCatalogPort
 from facereco.domain.ports.event_repository import EventRepositoryPort
 from facereco.domain.ports.face_detector import FaceDetectorPort
 from facereco.domain.ports.face_embedder import FaceEmbedderPort
@@ -36,6 +39,7 @@ from facereco.domain.ports.vector_search import VectorSearchPort
 from facereco.domain.value_objects.model_version import ModelVersion
 from facereco.infrastructure.audit.postgres_audit_log import PostgresAuditLog
 from facereco.infrastructure.config.settings import settings
+from facereco.infrastructure.db.event_catalog_pg import PostgresEventCatalog
 from facereco.infrastructure.db.event_repository_pg import PostgresEventRepository
 from facereco.infrastructure.db.face_embedding_repository_pg import (
     PostgresFaceEmbeddingRepository,
@@ -105,6 +109,28 @@ def get_queue_status_use_case(
     queue_monitor: Annotated[QueueMonitorPort, Depends(get_queue_monitor)],
 ) -> GetIndexingQueueStatusUseCase:
     return GetIndexingQueueStatusUseCase(queue_monitor=queue_monitor)
+
+
+def get_event_catalog(session: DbSession) -> EventCatalogPort:
+    return PostgresEventCatalog(session)
+
+
+def get_list_events_use_case(
+    catalog: Annotated[EventCatalogPort, Depends(get_event_catalog)],
+) -> ListEventsUseCase:
+    return ListEventsUseCase(
+        catalog=catalog,
+        current_model_version=ModelVersion(value=settings.model_version),
+    )
+
+
+def get_event_detail_use_case(
+    catalog: Annotated[EventCatalogPort, Depends(get_event_catalog)],
+) -> GetEventDetailUseCase:
+    return GetEventDetailUseCase(
+        catalog=catalog,
+        current_model_version=ModelVersion(value=settings.model_version),
+    )
 
 
 def get_statistics_repository(session: DbSession) -> StatisticsPort:

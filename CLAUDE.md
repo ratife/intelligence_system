@@ -385,7 +385,9 @@ real decisions, unit-tested in `tests/unit/domain/test_system_statistics.py`:
   pending ones, which produced no faces yet, would flatten the average.
 - `average_top_score` averages only *successful* searches (`top_score IS NOT NULL`).
 - Every rate returns `0.0` when its denominator is zero — "nothing to measure",
-  not an error. A fresh install must render, not crash.
+  not an error. A fresh install must render, not crash. That single rule lives
+  in `domain/value_objects/rates.py` (`read_rate`) and is shared with the event
+  catalogue, so the same indicator can't be computed two ways on two screens.
 - `__post_init__` rejects negative counters and subset-larger-than-set
   (`indexed > total`), which would mean the aggregate query is wrong.
 
@@ -404,6 +406,40 @@ dev data (91% shown for 74% real), on the very indicator meant to tune the gate.
 reason, so the reasons still sum to the total. This is a read-side fix, not a
 repair: the duplication in the table remains to be dealt with (a unique
 constraint, or a status distinguishing "no face kept" from "to index").
+
+### Event catalogue read model (`GET /api/v1/events[/{id}]`)
+
+Backs the **Événements** tab. Answers what neither other screen does: the
+dashboard collapses the whole system into one number, search starts from a
+photo — between them nothing said *what was indexed for this event, and what
+was discarded*.
+
+Same seam as the stats endpoint, and for the same reason (browsing the catalogue
+is a product feature, not tooling): `EventCatalogPort`
+(`domain/ports/event_catalog.py`) → `ListEventsUseCase` /
+`GetEventDetailUseCase` → `PostgresEventCatalog`
+(`infrastructure/db/event_catalog_pg.py`). Kept apart from
+`EventRepositoryPort`, whose contract serves the indexing pipeline. **Not** the
+same thing as `/api/v1/admin/events`, which *creates* events and bypasses the
+ports on purpose.
+
+- **`LATERAL` subqueries, not a flat join.** Joining `event_images`,
+  `face_embeddings` and `rejected_faces` in one flat query fans out per image
+  (15 faces × 20 rejections = 300 rows for one photo). The correlated form is
+  also evaluated only for the events in the requested page.
+- **Counts are framed by the current model version.** "Indexed" only means
+  anything for one model version — the same assumption `list_images_needing_indexing`
+  already makes. Without it, a model migration would list each face twice, hence
+  draw each box twice.
+- **Detail counters are derived from the lists being displayed**, not from a
+  separate aggregate — a total contradicting the detail right below it would be
+  the worst of both.
+- `is_searchable` (no face kept) is the actionable diagnostic: an event can be
+  100% indexed and still never surface in a search, which a progress bar alone
+  would present as finished.
+- Discarded faces are listed with their reason but **not framed**:
+  `rejected_faces` stores no bbox. Framing them would need a schema change
+  (a `bbox` column, so migration `0002`) — deliberately not done here.
 
 ## Testing conventions
 

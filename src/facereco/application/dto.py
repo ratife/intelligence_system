@@ -47,3 +47,24 @@ class DetectQueryFacesCommand:
     """
 
     query_image_bytes: bytes
+
+
+@dataclass(frozen=True, slots=True)
+class ListEventsCommand:
+    """Intention de parcourir le catalogue d'événements, par tranches."""
+
+    limit: int = 50
+    offset: int = 0
+
+    def __post_init__(self) -> None:
+        if self.limit <= 0:
+            raise ValueError(f"limit doit être strictement positif, reçu {self.limit}.")
+        if self.offset < 0:
+            raise ValueError(f"offset ne peut pas être négatif, reçu {self.offset}.")
+
+
+@dataclass(frozen=True, slots=True)
+class GetEventDetailCommand:
+    """Intention de consulter le détail d'un événement précis."""
+
+    event_id: int

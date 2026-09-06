@@ -12,6 +12,7 @@ from facereco.domain.entities.event import Event, EventImage, IndexStatus
 from facereco.domain.entities.face import DetectedFace, FaceEmbedding
 from facereco.domain.ports.audit_log import AuditLogPort
 from facereco.domain.ports.clock import ClockPort
+from facereco.domain.ports.event_catalog import EventCatalogPort
 from facereco.domain.ports.event_repository import EventRepositoryPort
 from facereco.domain.ports.face_detector import FaceDetectorPort
 from facereco.domain.ports.face_embedder import FaceEmbedderPort
@@ -21,6 +22,7 @@ from facereco.domain.ports.object_storage import ObjectStoragePort
 from facereco.domain.ports.quota import SearchQuotaPort
 from facereco.domain.ports.vector_search import VectorSearchHit, VectorSearchPort
 from facereco.domain.value_objects.embedding_vector import EMBEDDING_DIMENSION, EmbeddingVector
+from facereco.domain.value_objects.event_catalog import EventCatalogPage, EventDetail
 from facereco.domain.value_objects.model_version import ModelVersion
 
 
@@ -188,3 +190,20 @@ class AlwaysAllowQuota(SearchQuotaPort):
 class AlwaysDenyQuota(SearchQuotaPort):
     def check_and_consume(self, actor_id: str) -> bool:
         return False
+
+
+@dataclass
+class ScriptedEventCatalog(EventCatalogPort):
+    """Catalogue en mémoire : retient la version de modèle qu'on lui a demandée."""
+
+    page: EventCatalogPage | None = None
+    details: dict[int, EventDetail] = field(default_factory=dict)
+    model_versions_seen: list[str] = field(default_factory=list)
+
+    def list_events(self, model_version: ModelVersion, limit: int, offset: int) -> EventCatalogPage:
+        self.model_versions_seen.append(str(model_version))
+        return self.page or EventCatalogPage(events=(), total_count=0)
+
+    def get_event_detail(self, event_id: int, model_version: ModelVersion) -> EventDetail | None:
+        self.model_versions_seen.append(str(model_version))
+        return self.details.get(event_id)

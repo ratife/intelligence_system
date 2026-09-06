@@ -24,6 +24,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from facereco.domain.value_objects.rates import read_rate
+
 
 @dataclass(frozen=True, slots=True)
 class RejectionReasonCount:
@@ -91,12 +93,12 @@ class SystemStatistics:
     @property
     def indexing_completion_rate(self) -> float:
         """Part des images dont l'indexation est terminée (0.0 → 1.0)."""
-        return self._ratio(self.indexed_image_count, self.image_count)
+        return read_rate(self.indexed_image_count, self.image_count)
 
     @property
     def quality_rejection_rate(self) -> float:
         """Part des visages *détectés* écartés par le filtre qualité (§6.1)."""
-        return self._ratio(self.rejected_face_count, self.detected_face_count)
+        return read_rate(self.rejected_face_count, self.detected_face_count)
 
     @property
     def average_faces_per_indexed_image(self) -> float:
@@ -105,14 +107,9 @@ class SystemStatistics:
         Rapporter au total mélangerait les images en attente, qui n'ont encore
         produit aucun visage, et écraserait artificiellement la moyenne.
         """
-        return self._ratio(self.face_count, self.indexed_image_count)
+        return read_rate(self.face_count, self.indexed_image_count)
 
     @property
     def empty_search_rate(self) -> float:
         """Part des recherches n'ayant retourné aucun événement (§10.2)."""
-        return self._ratio(self.empty_search_count, self.search_count)
-
-    @staticmethod
-    def _ratio(numerator: int, denominator: int) -> float:
-        """Un ratio sans dénominateur vaut 0.0 : « rien à mesurer », pas une erreur."""
-        return 0.0 if denominator == 0 else numerator / denominator
+        return read_rate(self.empty_search_count, self.search_count)
