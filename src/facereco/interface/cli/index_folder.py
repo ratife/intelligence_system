@@ -25,7 +25,7 @@ from facereco.infrastructure.ml.insightface_detector import InsightFaceDetector
 
 logger = logging.getLogger("facereco.cli.index_folder")
 
-IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp",".avif", ".tiff", ".tif"}
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".avif", ".tiff", ".tif"}
 
 
 def iter_image_paths(folder: Path) -> list[Path]:
