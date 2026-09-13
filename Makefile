@@ -39,7 +39,7 @@ web/node_modules:
 # make lui-même. Un simple `kill 0` tuerait aussi make, qui se plaindrait alors
 # en « wait: No child processes » ; et sans le `exit 0` final, make relaierait la
 # mort par signal d'onnxruntime en « Segmentation fault » à chaque Ctrl+C.
-start: .env $(VENV) web/node_modules ## Lance tout le système : infra + API + worker + interface web (Ctrl+C arrête tout)
+start: .env $(VENV) web/node_modules ## Lance tout en local : infra Docker + API + worker + web sur la machine (Ctrl+C arrête tout)
 	@docker compose up -d --wait
 	@echo ""
 	@echo "  Web    http://localhost:4200"
@@ -63,9 +63,26 @@ start: .env $(VENV) web/node_modules ## Lance tout le système : infra + API + w
 up: ## Démarre l'infra locale (Postgres+pgvector, Redis, MinIO)
 	docker compose up -d
 
+# `--profile app` est nécessaire même pour arrêter : sans lui, `down` ignore les
+# services de profil et laisserait tourner l'API, le worker et le front.
 .PHONY: down
-down: ## Arrête l'infra locale
-	docker compose down
+down: ## Arrête tout ce que Docker fait tourner (infra + conteneurs applicatifs)
+	docker compose --profile app down
+
+.PHONY: stack
+stack: .env ## Lance tout le système en conteneurs (API, worker, web sur :8080) — alternative à `start`
+	docker compose --profile app up -d --build
+	@echo ""
+	@echo "  Web    http://localhost:8080"
+	@echo "  API    http://localhost:8000/docs"
+	@echo "  MinIO  http://localhost:9001  (minioadmin / minioadmin)"
+	@echo ""
+	@echo "  Logs : 'make stack-logs' — arrêt : 'make down'"
+	@echo ""
+
+.PHONY: stack-logs
+stack-logs: ## Suit les logs des conteneurs applicatifs (API, worker, web)
+	docker compose --profile app logs -f api worker web
 
 .PHONY: api
 api: ## Lance l'API FastAPI (reload)
