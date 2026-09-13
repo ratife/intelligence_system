@@ -95,6 +95,7 @@ def run_worker(consumer_name: str | None = None) -> None:
         access_key=settings.s3_access_key,
         secret_key=settings.s3_secret_key,
         region=settings.s3_region,
+        public_endpoint_url=settings.s3_public_endpoint_url,
     )
 
     logger.info("worker d'indexation démarré (consumer=%s)", consumer_name)

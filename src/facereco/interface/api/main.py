@@ -45,6 +45,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         access_key=settings.s3_access_key,
         secret_key=settings.s3_secret_key,
         region=settings.s3_region,
+        public_endpoint_url=settings.s3_public_endpoint_url,
     )
     redis_client = redis.Redis.from_url(settings.redis_url, decode_responses=True)
     app.state.redis_client = redis_client

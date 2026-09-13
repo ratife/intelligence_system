@@ -162,6 +162,7 @@ def main() -> None:
         access_key=settings.s3_access_key,
         secret_key=settings.s3_secret_key,
         region=settings.s3_region,
+        public_endpoint_url=settings.s3_public_endpoint_url,
     )
 
     if args.event_id is not None:
