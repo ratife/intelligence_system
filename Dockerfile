@@ -19,9 +19,28 @@ ARG PYTHON_IMAGE=python:3.12-slim-bookworm
 
 
 # ---------------------------------------------------------------------------
+# Base commune : bibliothèques système d'OpenCV et d'onnxruntime.
+# ---------------------------------------------------------------------------
+# Partagée par le build et l'exécution, et non réservée au runtime : le
+# préchargement des modèles importe `insightface`, donc `cv2`, dès l'étape de
+# build. libGL/libglib : `insightface` dépend d'`opencv-python` (build complet,
+# pas seulement le headless déclaré dans pyproject.toml) — sans elles,
+# `import cv2` échoue sur libGL.so.1, puis sur libxcb.so.1 que libgl1 apporte en
+# dépendance transitive. libgomp : OpenMP, requis par onnxruntime.
+FROM ${PYTHON_IMAGE} AS system-base
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends \
+        libgl1 \
+        libglib2.0-0 \
+        libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+
+# ---------------------------------------------------------------------------
 # Étape de build : dépendances + paquet, dans un venv déplaçable tel quel.
 # ---------------------------------------------------------------------------
-FROM ${PYTHON_IMAGE} AS builder
+FROM system-base AS builder
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_ROOT_USER_ACTION=ignore \
@@ -61,17 +80,7 @@ ensure_available('models', '${INSIGHTFACE_MODEL_PACK}', root='/opt/insightface')
 # ---------------------------------------------------------------------------
 # Base d'exécution commune à l'API et au worker.
 # ---------------------------------------------------------------------------
-FROM ${PYTHON_IMAGE} AS runtime
-
-# libGL/libglib : `insightface` dépend d'`opencv-python` (build complet, pas
-# seulement le headless déclaré dans pyproject.toml) — sans elles, `import cv2`
-# échoue sur libGL.so.1. libgomp : OpenMP, requis par onnxruntime.
-RUN apt-get update \
-    && apt-get install --yes --no-install-recommends \
-        libgl1 \
-        libglib2.0-0 \
-        libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
+FROM system-base AS runtime
 
 ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
