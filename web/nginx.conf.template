@@ -1,0 +1,63 @@
+# Configuration nginx du front facereco.
+# Traitée par envsubst au démarrage du conteneur (docker-entrypoint.d de l'image
+# nginx) : seules les variables réellement exportées sont substituées, les
+# variables nginx ($uri, $host…) traversent intactes.
+
+server {
+    listen      80;
+    server_name _;
+
+    root  /usr/share/nginx/html;
+    index index.html;
+
+    gzip              on;
+    gzip_vary         on;
+    gzip_min_length   1024;
+    gzip_types        text/plain text/css application/javascript application/json image/svg+xml;
+
+    # Bundles à empreinte (outputHashing: "all" en configuration production) :
+    # leur nom change à chaque contenu, ils peuvent donc être figés.
+    location ~* \.(?:js|css|woff2?|ttf|eot)$ {
+        expires    1y;
+        add_header Cache-Control "public, immutable";
+        try_files  $uri =404;
+    }
+
+    # index.html est le seul fichier non haché : le mettre en cache figerait
+    # l'application sur les bundles de la version précédente.
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+    }
+
+    # Proxy vers l'API. Le chemin est conservé tel quel (proxy_pass sans URI) :
+    # /api/v1/... côté navigateur reste /api/v1/... côté FastAPI.
+    location /api/ {
+        proxy_pass ${API_UPSTREAM};
+
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # L'import envoie une image par requête et l'API refuse au-delà de
+        # MAX_IMAGE_SIZE_BYTES (10 Mo) ; la marge couvre l'enveloppe multipart.
+        # Laisser nginx trancher en 413 avant l'API ferait perdre son message.
+        client_max_body_size 12m;
+
+        # Indexation synchrone côté route admin (détection + embedding dans la
+        # requête) : la réponse peut tarder sur une photo chargée en visages.
+        proxy_read_timeout    300s;
+        proxy_send_timeout    300s;
+
+        # Sans mise en tampon des requêtes, la barre de progression du client
+        # suit l'octet réellement transmis et non son écriture dans nginx.
+        proxy_request_buffering off;
+    }
+
+    # L'application n'utilise pas de Router (onglets pilotés par un signal),
+    # mais un rechargement sur une URL profonde ou une 404 doit rendre l'app,
+    # pas la page d'erreur de nginx.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

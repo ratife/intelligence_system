@@ -1,0 +1,27 @@
+:host {
+  display: block;
+  flex: none;
+  width: var(--crop-size, 72px);
+}
+
+.crop {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.crop img {
+  position: absolute;
+  height: auto;
+  /* Tant que l'image n'est pas mesurée, aucun décalage n'est calculable : on la
+     garde masquée plutôt que d'afficher un cadrage faux pendant une frame. */
+  visibility: hidden;
+}
+
+.crop-image--placed {
+  visibility: visible;
+}

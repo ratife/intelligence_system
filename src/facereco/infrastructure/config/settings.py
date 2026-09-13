@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     indexing_max_delivery_attempts: int = 3
 
     s3_endpoint_url: str = "http://localhost:9000"
+    # Endpoint par lequel le *navigateur* joint le stockage. Les URLs signées
+    # partent vers le client final, et SigV4 signe l'en-tête Host : l'URL ne peut
+    # pas être réécrite après coup, il faut la signer d'emblée avec l'hôte que le
+    # navigateur sait résoudre. En conteneur les deux divergent (`minio:9000` en
+    # interne, `localhost:9000` depuis le poste). Vide = identique à s3_endpoint_url.
+    s3_public_endpoint_url: str = ""
     s3_bucket: str = "facereco-events"
     s3_access_key: str = "minioadmin"
     s3_secret_key: str = "minioadmin"

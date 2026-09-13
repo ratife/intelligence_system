@@ -136,7 +136,17 @@ event (`domain/services/event_scoring.py`) → audit log → return with evidenc
 
 - If more than one face is detected and the caller didn't pass `face_index`,
   the use case raises `AmbiguousFaceSelectionError` rather than guessing —
-  callers must disambiguate explicitly.
+  callers must disambiguate explicitly. `POST /api/v1/search/faces`
+  (`DetectQueryFacesUseCase`) is what makes that demand answerable: it returns
+  every detected face's bbox and index so a caller can *see* what index 2 is
+  before naming it. It deliberately stays out of the search pipeline — no
+  quota (nothing is queried, and spending the operator's search budget just to
+  draw boxes would be wrong), no audit entry (ADR 008 covers searches, not
+  detections), no quality gate (that gate is an indexing rule; showing a
+  « rejected » verdict here would imply a barrier search doesn't have). It uses
+  the same shared `FaceDetectorPort`, so the boxes shown are the ones search
+  will use — an image with no face returns an empty list rather than 409,
+  since « what is in this image » has « nothing » as a valid answer.
 - Event aggregation score = `max(similarity) + λ·log(1 + match_count)`
   (`DEFAULT_CORROBORATION_LAMBDA = 0.02`). Max alone is too sensitive to a
   single false positive; averaging dilutes the signal on high-face-count
@@ -182,19 +192,100 @@ actually about the IAM migration.
 
 A separate Angular workspace (standalone components, no NgModules — scaffolded
 with Angular CLI 21, 2025 file-naming style: `search.ts`/`.html`/`.css`, no
-`.component.` infix). Two tabs, toggled in `app.ts` via a plain signal (no
-Angular Router — `ng new` was run with `--routing=false`): **Recherche**
-(`search/`, `POST /api/v1/search/by-face`) and **Importer un événement**
+`.component.` infix). Four tabs, toggled in `app.ts` via a plain signal (no
+Angular Router — `ng new` was run with `--routing=false`): **Tableau de bord**
+(`dashboard/`, `GET /api/v1/stats` — the default tab), **Événements**
+(`events/` + `event-detail/`, the catalogue routes below), **Recherche**
+(`search/`, `POST /api/v1/search/faces` then `POST /api/v1/search/by-face`)
+and **Importer un événement**
 (`event-import/`, the `admin_events` routes below). `src/app/models/*.model.ts`
 mirror the backend's Pydantic schemas field-for-field by hand (no codegen
-wired up) — update both sides together when a schema changes. Auth (bearer
-token + actor id) lives in the shared `AuthCredentialsService`
-(`services/auth-credentials.service.ts`), persisted to `localStorage` and
-injected into both tabs — don't reintroduce per-component copies of this
-state. The FastAPI app has `CORSMiddleware` configured via
+wired up) — update both sides together when a schema changes. The FastAPI app
+has `CORSMiddleware` configured via
 `settings.cors_allowed_origins` (defaults to `http://localhost:4200`)
 specifically so this dev server can call it; keep that setting in sync if the
 frontend's origin/port changes.
+
+**Faces are shown, never just numbered or scored.** Two presentational
+components carry this, both under `web/src/app/`:
+
+- `face-frame/` — an image plus its face boxes. Boxes arrive in *image pixels*
+  and are converted to percentages of the natural dimensions, so they survive
+  any display size. Two things it must keep doing: its wrapper is
+  `inline-block` so it hugs the image exactly (letterboxing would shift every
+  box), and each measurement is stored **with the `src` that produced it**, so
+  switching photos can't paint new boxes onto the previous image's dimensions.
+  No EXIF correction is applied or needed — OpenCV (detection side, verified on
+  cv2 5.0) and browsers both apply EXIF orientation, so the two coordinate
+  frames already agree. Note `_image_size()` in `devtools/event_import.py` does
+  *not*: it reads PIL's raw size, so `event_images.width/height` is wrong for
+  rotated photos — don't build overlays on those columns.
+- `face-crop/` — a square close-up on one face, done by scaling and offsetting
+  the same (already cached) image inside a fixed window, no server-side crop.
+  It exists because a 150px face in a 4000px photo renders ~10px wide in a card:
+  the frame answers *where*, the crop answers *who*, and only the second makes
+  a similarity score checkable by a human.
+
+`search/` uses both. Picking a file triggers detection immediately, so the
+photo comes back with every face framed; with more than one face the operator
+**clicks** the one to search (the old free-text "Index de visage" field is
+gone — it asked for a number nothing on screen explained, and a group photo
+was otherwise a dead end at 409). Badges read `#0`, `#1` — the API's own
+`face_index`, with `#` marking it as an identifier rather than a rank; don't
+renumber them 1-based, the audit log and the API speak the 0-based one.
+Changing the selected face clears the previous results, which described a
+different person. If detection is unreachable the search stays available (the
+API will arbitrate) and the used face is still framed afterwards from
+`query.face_used`.
+
+**Événements: `events/` loads, `event-detail/` displays.** No router here
+either — the selected event is a signal, and `event-detail/` is presentational
+with an `EventDetail` input, the same split as `event-import/` +
+`import-progress/`. The list is paginated (25 per page, "Charger la suite")
+because an unbounded event list is a query that grows silently with the
+database. Each card is fully clickable through a `::after` overlay on the title
+`<button>` — a `<button>` wrapping block content would be invalid HTML, and a
+`role="button"` on the card would double the target for a screen reader. In the
+detail, each photo carries its indexed faces framed via `face-frame/`; discarded
+faces are listed with their reason and *not* framed, because the database keeps
+no bbox for them (the screen mirrors what is known, it doesn't invent). Rejection
+reasons are humanised by the shared `rejection-reason.ts`, also used by the
+dashboard.
+
+**Styling goes through a shared design system, not per-component CSS.**
+`web/src/styles.css` holds the design tokens (surfaces, one ink per role,
+accent, status colors, radii, spacing scale, shadows, a single focus ring) and
+the app-level primitives: `.page`/`.subtitle`/`.micro-label`, `.card`,
+`.btn` + `.btn--primary`/`.btn--quiet`/`.btn--sm`, `.alert--error`/`.alert--info`,
+the form control base styles, and the shared data-viz pieces used by both the
+dashboard and the import progress panel (`.meter`, `.stack`/`.legend`/`.swatch`
++ `.tone-*`, `.tiles`/`.tile`). These are deliberately **global**: Angular's
+view encapsulation only scopes styles written inside a component, so a global
+base is what lets one system reach every screen. A component's own `.css` keeps
+only what is genuinely local to it — no colors in hex, no re-declared page
+shell, card or button. Before adding a rule, check whether the token or
+primitive already exists; before hardcoding a color, add or reuse a token.
+`grep -n "#[0-9a-fA-F]\{3,6\}" web/src/app/*/*.css` must stay empty.
+
+**The whole UI sits behind a login gate.** `app.html` renders `<app-login>`
+(`login/`) until `AuthCredentialsService.unlocked()` is true; only then do the
+tabs and their content exist. The "password" on that screen *is* the shared
+`API_BEARER_TOKEN`, and the "identifiant" is the `X-Actor-Id` — `Login`
+validates them against `GET /api/v1/auth/session`
+(`interface/api/routers/auth.py`, which just exposes `get_current_actor_id`
+and adds no auth logic of its own), so credentials are verified server-side,
+never compared in the browser. Session state lives in the shared
+`AuthCredentialsService` (`services/auth-credentials.service.ts`), backed by
+**`sessionStorage`** (not `localStorage`) so the gate closes when the browser
+does; `unlocked` must stay a signal (it is written from a `.subscribe()` — see
+the zoneless note below). `authInterceptor`
+(`services/auth-interceptor.ts`, wired in `app.config.ts`) calls `lock()` on
+any 401 so a rotated token can't leave the user "logged in" against failing
+screens. Both tabs read `actorId`/`bearerToken` off the service when building
+requests — don't reintroduce per-component credential fields; those inline
+"Identification" fieldsets were removed when the gate landed. Note this gate
+protects the *interface*, not the API: the API was already protected by the
+same token, and a single shared token is still not an IAM (§13).
 
 **This app has no `zone.js`** (not in `package.json`, nothing in
 `app.config.ts`) — Angular 21's zoneless mode. Change detection only runs
@@ -209,6 +300,56 @@ written from a `.subscribe()`/`.then()` callback must be a signal; state only
 ever mutated synchronously from a template event handler can stay a plain
 field.
 
+**Photos can be dropped, folders included.** The drop zone lives on the photo
+fieldset (`event-import/`), and `dropped-files.ts` turns a `DataTransfer` into a
+flat file list. Two properties of that API decide the shape of that module:
+entries must be collected **synchronously** in the handler — the `DataTransfer`
+is emptied as soon as it returns, so any `await` before the collection loses the
+drop — and `readEntries` yields **one batch at a time** (100 on Chromium), so a
+300-photo folder silently delivers 100 without the re-read loop. Directory
+recursion is depth-capped, an unreadable file is skipped rather than fatal, and
+where `webkitGetAsEntry` is missing it falls back to `DataTransfer.files`.
+A drop is not filtered by `accept="image/*"`, so `addPhotos` does the sorting for
+both paths (MIME type, extension as fallback when a dropped file carries none)
+and reports what it discarded. The component also blocks stray drops on the
+document: missing the zone would otherwise make the browser open the image and
+take the half-filled form with it. The file input stays — a drop zone has no
+keyboard path.
+
+**The photo selection accumulates; it does not replace.** A native
+`<input type="file">` swaps its whole selection on every visit, so picking three
+photos then reopening the picker to add two more silently dropped the first
+three — and an event import is rarely composed in one gesture. The pure helpers
+in `web/src/app/photo-selection.ts` own that: `addPhotos` appends and skips
+files already selected (identity = `name|size|lastModified`, a heuristic; the
+real guarantee stays the server's `event_images.content_hash`, which answers
+`duplicate` whatever the filename), and reports how many it skipped rather than
+silently swallowing them. Two details the component must keep: it resets
+`input.value` after each pick, or re-selecting a file just removed fires no
+`change` event; and it snapshots the files into `queuedFiles` at submit time, so
+the running queue can't follow a selection edited underneath it. Files over
+`MAX_IMAGE_SIZE_BYTES` (mirrored from `admin_events.py`) are flagged at
+selection time and block submit — a certain 413 is not worth discovering after
+several minutes of queue.
+
+**Import progress is driven client-side, one image per request.** The admin
+import route indexes synchronously and only answers once the whole batch is
+done, so sending the batch in a single multipart request gives the UI no
+intermediate signal at all. `EventImport` therefore owns the queue: it builds
+one `ImportItem` per selected file (`models/import-progress.model.ts`) and
+walks them sequentially through `EventImportService.uploadImage` (one image,
+`observe: 'events'` + `reportProgress`), patching the item on each HTTP event.
+Sequential, not parallel — the ONNX detector/embedder are single instances on
+the API side. A failed image is recorded and the queue continues; cancelling
+aborts the client request but the server still finishes the image already in
+flight, hence status `cancelled` rather than a rollback. `ImportProgress`
+(`import-progress/`) is presentational and derives everything from that list:
+overall meter, counters, part-to-whole breakdowns (image outcomes, and
+accepted-vs-rejected faces — the quality-gate rejection rate from §6.1), and
+the per-image table. Status is never carried by color alone (icon + label
+everywhere); `anyComponentStyle` budget in `angular.json` was raised from 4kB
+to 8kB for that panel.
+
 ### Admin/import routes (`interface/api/routers/admin_events.py`)
 
 `GET/POST /api/v1/admin/events` and `POST /api/v1/admin/events/{id}/images`
@@ -221,6 +362,131 @@ object storage singletons from `app.state` via the existing `deps.py`
 providers) rather than going through the Redis queue + worker — intentional,
 so the UI gets an immediate per-image accepted/rejected count instead of
 having to poll.
+
+### Re-indexing from the dashboard
+
+The **Tableau de bord** tab has a button that calls
+`POST /api/v1/admin/indexing/trigger` (`routers/indexing.py`) for the images
+still waiting. Two things the UI is careful about, and any change here must
+preserve:
+
+- **Queuing is not indexing.** The endpoint only publishes to the Redis stream;
+  the *worker* does the work. The UI never says "indexed" after a successful
+  trigger — it says "mise en file", then polls `GET /api/v1/stats` every 2s and
+  lets the pending counter fall.
+- **A worker that isn't running looks exactly like a slow one.** If nothing has
+  been consumed after 15s, the UI stops polling and says the worker is probably
+  down (`make worker`, or `make start`). Without that, the queue fills silently
+  and the user waits forever. Re-triggering is safe — indexing is idempotent on
+  `(image_id, model_version, face_index)`.
+
+### Worker supervision (`GET /api/v1/admin/workers`)
+
+Shown as a card on the **Tableau de bord**. Same read-port shape as the stats
+endpoint: `QueueMonitorPort` (`domain/ports/queue_monitor.py`) →
+`GetIndexingQueueStatusUseCase` → `RedisQueueMonitor`
+(`infrastructure/messaging/redis_queue_monitor.py`, using `XINFO GROUPS` /
+`XINFO CONSUMERS` / `XLEN`). It is deliberately kept apart from
+`MessageQueuePort`, which the pipeline depends on to publish/read/ack — that
+contract has no business carrying introspection methods.
+
+**Redis registers consumers, not processes.** A consumer entry outlives the
+worker that created it and carries no liveness flag; the only signal is
+activity. So the vocabulary is `is_active` (polled recently — threshold
+`ACTIVE_IDLE_THRESHOLD_SECONDS`, 30s) and never "running", and the UI says
+"silencieux", explaining that this is either a dead process or a live one with
+nothing to do. A killed worker keeps showing as active until the threshold
+elapses; that lag is inherent, not a bug.
+
+`is_stalled` (backlog > 0 with no active consumer) is the one actionable
+diagnostic — it replaced the dashboard's earlier "pending hasn't moved in 15s"
+heuristic, which is now only a fallback if this endpoint is unreachable.
+
+**Each worker derives a unique consumer name** (`<host>-<pid>`,
+`default_consumer_name()` in `interface/worker/indexing_worker.py`). The name
+used to be hardcoded, so every process registered as the same consumer: they
+were indistinguishable in supervision and, worse, reclaimed each other's
+in-flight messages through `XAUTOCLAIM`, re-processing images already taken.
+
+### Dashboard read model (`GET /api/v1/stats`)
+
+Backs the **Tableau de bord** tab. It is a **read model, not observability** —
+Lot 3 (metrics, traces, alerting) stays deliberately unimplemented, and this
+endpoint takes a snapshot on demand with no history or time series. Don't grow
+it into a metrics pipeline without revisiting that decision.
+
+It goes through the full seam rather than querying the DB from the router:
+`StatisticsPort` (`domain/ports/statistics.py`) → `GetSystemStatisticsUseCase`
+→ `PostgresStatisticsRepository` (`infrastructure/db/statistics_pg.py`), wired
+in `deps.py`. This is a *read* port, kept separate from the write repositories
+so counting methods don't pollute their contracts. It is **not** the devtools
+escape hatch used by `admin_events`/`import_folder`: a dashboard is a product
+feature, not tooling, so the boundary holds.
+
+Raw counters come from SQL; the **rates are computed in the domain**
+(`domain/value_objects/system_statistics.py`) because their denominators encode
+real decisions, unit-tested in `tests/unit/domain/test_system_statistics.py`:
+
+- `quality_rejection_rate` is over *detected faces* (kept + rejected), not images.
+- `average_faces_per_indexed_image` divides by **indexed** images — counting
+  pending ones, which produced no faces yet, would flatten the average.
+- `average_top_score` averages only *successful* searches (`top_score IS NOT NULL`).
+- Every rate returns `0.0` when its denominator is zero — "nothing to measure",
+  not an error. A fresh install must render, not crash. That single rule lives
+  in `domain/value_objects/rates.py` (`read_rate`) and is shared with the event
+  catalogue, so the same indicator can't be computed two ways on two screens.
+- `__post_init__` rejects negative counters and subset-larger-than-set
+  (`indexed > total`), which would mean the aggregate query is wrong.
+
+Two indicators exist to answer open questions the README raises rather than as
+filler: `quality_rejection_rate` + `rejections_by_reason` make the quality gate
+(§6.1) tunable, and `empty_search_rate` + `average_top_score` are the first
+signals on the uncalibrated 0.38 similarity threshold (§10.2).
+
+**`rejected_face_count` counts distinct `(image_id, face_index)`, not rows.**
+`rejected_faces` has no unique constraint, and an image whose faces were *all*
+discarded stays eligible for indexing (it has no embedding for the current model
+version, so `list_images_needing_indexing` re-selects it) — every re-run
+re-inserts the same rejections. Counting rows inflated the rate by 3.75× on the
+dev data (91% shown for 74% real), on the very indicator meant to tune the gate.
+`rejections_by_reason` dedupes the same way, keeping each face's *earliest*
+reason, so the reasons still sum to the total. This is a read-side fix, not a
+repair: the duplication in the table remains to be dealt with (a unique
+constraint, or a status distinguishing "no face kept" from "to index").
+
+### Event catalogue read model (`GET /api/v1/events[/{id}]`)
+
+Backs the **Événements** tab. Answers what neither other screen does: the
+dashboard collapses the whole system into one number, search starts from a
+photo — between them nothing said *what was indexed for this event, and what
+was discarded*.
+
+Same seam as the stats endpoint, and for the same reason (browsing the catalogue
+is a product feature, not tooling): `EventCatalogPort`
+(`domain/ports/event_catalog.py`) → `ListEventsUseCase` /
+`GetEventDetailUseCase` → `PostgresEventCatalog`
+(`infrastructure/db/event_catalog_pg.py`). Kept apart from
+`EventRepositoryPort`, whose contract serves the indexing pipeline. **Not** the
+same thing as `/api/v1/admin/events`, which *creates* events and bypasses the
+ports on purpose.
+
+- **`LATERAL` subqueries, not a flat join.** Joining `event_images`,
+  `face_embeddings` and `rejected_faces` in one flat query fans out per image
+  (15 faces × 20 rejections = 300 rows for one photo). The correlated form is
+  also evaluated only for the events in the requested page.
+- **Counts are framed by the current model version.** "Indexed" only means
+  anything for one model version — the same assumption `list_images_needing_indexing`
+  already makes. Without it, a model migration would list each face twice, hence
+  draw each box twice.
+- **Detail counters are derived from the lists being displayed**, not from a
+  separate aggregate — a total contradicting the detail right below it would be
+  the worst of both.
+- `is_searchable` (no face kept) is the actionable diagnostic: an event can be
+  100% indexed and still never surface in a search, which a progress bar alone
+  would present as finished.
+- Discarded faces are listed with their reason but **not framed**:
+  `rejected_faces` stores no bbox. Framing them would need a schema change
+  (a `bbox` column, so migration `0002`) — deliberately not done here.
 
 ## Testing conventions
 

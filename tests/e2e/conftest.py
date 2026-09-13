@@ -24,12 +24,16 @@ from facereco.infrastructure.config.settings import settings
 from facereco.infrastructure.db import session as db_session_module
 from facereco.infrastructure.storage.s3_object_storage import ObjectStoragePort
 from facereco.interface.api.error_handlers import register_error_handlers
+from facereco.interface.api.routers.auth import router as auth_router
+from facereco.interface.api.routers.events import router as events_router
 from facereco.interface.api.routers.indexing import router as indexing_router
 from facereco.interface.api.routers.search import router as search_router
+from facereco.interface.api.routers.statistics import router as statistics_router
 from tests.unit.application.fakes import DeterministicFaceEmbedder, ScriptedFaceDetector
 
 MIGRATIONS_FILE = Path(__file__).resolve().parents[2] / "migrations" / "0001_init.sql"
 ACTOR_HEADERS = {"Authorization": f"Bearer {settings.api_bearer_token}", "X-Actor-Id": "e2e-test"}
+GROUP_PHOTO_BYTES = b"group-photo-bytes"
 
 
 class InMemoryObjectStorage(ObjectStoragePort):
@@ -67,11 +71,15 @@ def test_app(postgres_container, monkeypatch) -> Iterator[FastAPI]:
     )
 
     app = FastAPI()
+    app.include_router(auth_router)
     app.include_router(search_router)
     app.include_router(indexing_router)
+    app.include_router(statistics_router)
+    app.include_router(events_router)
     register_error_handlers(app)
 
     query_image = b"query-image-bytes"
+    landmarks = ((30.0, 40.0), (70.0, 40.0), (50.0, 60.0), (35.0, 80.0), (65.0, 80.0))
     faces_by_image = {
         query_image: [
             DetectedFace(
@@ -79,9 +87,27 @@ def test_app(postgres_container, monkeypatch) -> Iterator[FastAPI]:
                 detection_score=0.95,
                 sharpness=120.0,
                 yaw_degrees=0.0,
-                landmarks=((30.0, 40.0), (70.0, 40.0), (50.0, 60.0), (35.0, 80.0), (65.0, 80.0)),
+                landmarks=landmarks,
             )
-        ]
+        ],
+        # Photo de groupe : le cas qui rend la recherche ambiguë, et pour lequel
+        # l'interface a besoin des cadres afin qu'un humain désigne un visage.
+        GROUP_PHOTO_BYTES: [
+            DetectedFace(
+                bbox=BoundingBox(x=10, y=20, width=100, height=100),
+                detection_score=0.95,
+                sharpness=120.0,
+                yaw_degrees=0.0,
+                landmarks=landmarks,
+            ),
+            DetectedFace(
+                bbox=BoundingBox(x=300, y=40, width=80, height=80),
+                detection_score=0.62,
+                sharpness=90.0,
+                yaw_degrees=5.0,
+                landmarks=landmarks,
+            ),
+        ],
     }
     app.state.face_detector = ScriptedFaceDetector(faces_by_image)
     app.state.face_embedder = DeterministicFaceEmbedder(version="arcface-r100-v1")
@@ -89,6 +115,19 @@ def test_app(postgres_container, monkeypatch) -> Iterator[FastAPI]:
     app.state.search_quota = AlwaysAllowQuota()
 
     yield app
+
+    # Le conteneur Postgres est partagé par tout le module et `CREATE TABLE IF
+    # NOT EXISTS` ne remet rien à zéro : sans ce nettoyage, les données d'un test
+    # fuiteraient dans le suivant. Même stratégie que les tests d'intégration.
+    with engine.begin() as connection:
+        for table in (
+            "search_audit_log",
+            "rejected_faces",
+            "face_embeddings",
+            "event_images",
+            "events",
+        ):
+            connection.execute(text(f"TRUNCATE TABLE {table} CASCADE"))
 
     engine.dispose()
 

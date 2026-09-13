@@ -2,43 +2,58 @@
   <h1>Recherche par visage</h1>
   <p class="subtitle">Retrouve les événements où la personne d'une photo apparaît.</p>
 
-  <form class="search-form" (ngSubmit)="onSubmit()">
-    <fieldset class="credentials">
-      <legend>Identification</legend>
-      <label>
-        Acteur (X-Actor-Id)
-        <input
-          type="text"
-          name="actorId"
-          [(ngModel)]="credentials.actorId"
-          placeholder="alice"
-          required
-        />
-      </label>
-      <label>
-        Jeton (Bearer)
-        <input
-          type="password"
-          name="bearerToken"
-          [(ngModel)]="credentials.bearerToken"
-          placeholder="change-me-in-production"
-          required
-        />
-      </label>
-    </fieldset>
-
+  <form class="card search-form" (ngSubmit)="onSubmit()">
     <label class="file-field">
       Photo à rechercher
       <input type="file" accept="image/*" (change)="onFileSelected($event)" required />
     </label>
 
+    @if (queryPreviewUrl(); as preview) {
+      <section class="query-preview">
+        <h2 class="micro-label">Visage recherché</h2>
+
+        <app-face-frame
+          [src]="preview"
+          alt="Photo soumise à la recherche"
+          [boxes]="queryBoxes()"
+          [selectable]="needsFaceChoice()"
+          (boxSelected)="selectFace($event)"
+        />
+
+        @if (detecting()) {
+          <p class="note">Analyse de la photo…</p>
+        } @else if (detectError(); as message) {
+          <p class="alert alert--error" role="alert">
+            Visages non analysés : {{ message }} La recherche reste possible, mais aucun visage ne
+            pourra être désigné.
+          </p>
+        } @else if (queryFaces().length === 0) {
+          <p class="alert alert--info">
+            Aucun visage détecté sur cette photo. Essayez une image où le visage est plus grand,
+            plus net ou davantage de face.
+          </p>
+        } @else if (selectedFace(); as face) {
+          <p class="preview-caption">
+            @if (needsFaceChoice()) {
+              Visage <b>#{{ face.index }}</b> retenu parmi {{ queryFaces().length }} — cliquez-en un
+              autre pour changer.
+            } @else {
+              Un visage détecté, encadré ci-dessus.
+            }
+            <span class="quality">Score de détection {{ face.quality | number: '1.2-2' }}.</span>
+          </p>
+        } @else {
+          <p class="alert alert--info">
+            {{ queryFaces().length }} visages détectés — <b>cliquez celui à rechercher</b>. Le
+            système ne le choisit pas à votre place.
+          </p>
+        }
+      </section>
+    }
+
     <details class="advanced">
       <summary>Options avancées</summary>
       <div class="advanced-grid">
-        <label>
-          Index de visage
-          <input type="number" name="faceIndex" min="0" [(ngModel)]="faceIndex" />
-        </label>
         <label>
           Seuil de similarité
           <input
@@ -64,26 +79,25 @@
         </label>
       </div>
       <p class="hint">
-        Si plusieurs visages sont détectés dans la photo, l'API renverra une erreur invitant à
-        préciser l'index de visage ci-dessus.
+        Le seuil par défaut (0,38) n'est pas calibré sur des données réelles : l'abaisser ramène
+        plus de candidats et plus de faux positifs, l'élever fait l'inverse.
       </p>
     </details>
 
-    <button type="submit" [disabled]="loading()">
+    <button type="submit" class="btn btn--primary" [disabled]="!canSearch()">
       {{ loading() ? 'Recherche en cours…' : 'Rechercher' }}
     </button>
   </form>
 
   @if (error()) {
-    <p class="error">{{ error() }}</p>
+    <p class="alert alert--error" role="alert">{{ error() }}</p>
   }
 
   @if (queryInfo(); as info) {
     <p class="query-info">
-      {{ info.faces_detected }} visage(s) détecté(s) dans la photo — visage utilisé n°{{
-        info.face_used.index
-      }}
-      (score {{ info.face_used.quality | number: '1.2-2' }}), modèle {{ info.model_version }}.
+      Recherché avec le visage <b>#{{ info.face_used.index }}</b> sur
+      {{ info.faces_detected }} détecté(s) — modèle {{ info.model_version }}, seuil de similarité
+      appliqué sur chaque visage indexé.
     </p>
   }
 
@@ -92,16 +106,37 @@
   }
 
   <div class="results">
-    @for (match of results(); track match.event_id) {
-      <article class="card">
-        <img [src]="match.evidence.image_url" [alt]="match.description" />
-        <div class="card-body">
-          <h2>{{ match.description }}</h2>
-          <p class="meta">{{ match.event_date }} — {{ match.address }}</p>
-          <p class="confidence">
-            Confiance : {{ match.confidence | number: '1.2-2' }} ({{ match.match_count }} visage(s)
-            correspondant(s))
-          </p>
+    @for (card of resultCards(); track card.match.event_id) {
+      <article class="result">
+        <div class="result-media">
+          <app-face-frame
+            [src]="card.match.evidence.image_url"
+            [alt]="'Photo de : ' + card.match.description"
+            [boxes]="card.boxes"
+          />
+        </div>
+
+        <div class="result-body">
+          <h2>{{ card.match.description }}</h2>
+          <p class="meta">{{ card.match.event_date }} — {{ card.match.address }}</p>
+
+          <div class="evidence">
+            <app-face-crop
+              [src]="card.match.evidence.image_url"
+              [bbox]="card.match.evidence.bbox"
+              alt="Gros plan du visage reconnu"
+            />
+            <div class="evidence-scores">
+              <p class="confidence">
+                <b>{{ card.match.confidence | number: '1.2-2' }}</b>
+                de confiance · {{ card.match.match_count }} visage(s)
+              </p>
+              <p class="similarity">
+                Similarité du visage montré :
+                {{ card.match.evidence.similarity | number: '1.2-2' }}
+              </p>
+            </div>
+          </div>
         </div>
       </article>
     }

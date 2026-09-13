@@ -1,15 +1,45 @@
-<nav class="app-nav">
-  <button [class.active]="page() === 'search'" (click)="selectPage('search')">Recherche</button>
-  <button [class.active]="page() === 'import'" (click)="selectPage('import')">
-    Importer un événement
-  </button>
-</nav>
+@if (credentials.unlocked()) {
+  <nav class="app-nav">
+    <div class="app-nav-inner">
+      <button class="tab" [class.active]="page() === 'dashboard'" (click)="selectPage('dashboard')">
+        Tableau de bord
+      </button>
+      <button class="tab" [class.active]="page() === 'events'" (click)="selectPage('events')">
+        Événements
+      </button>
+      <button class="tab" [class.active]="page() === 'search'" (click)="selectPage('search')">
+        Recherche
+      </button>
+      <button class="tab" [class.active]="page() === 'import'" (click)="selectPage('import')">
+        Importer un événement
+      </button>
 
-@switch (page()) {
-  @case ('search') {
-    <app-search></app-search>
+      <div class="session">
+        <span class="actor" title="Identifiant connecté">
+          <span class="actor-dot" aria-hidden="true"></span>
+          {{ credentials.actorId }}
+        </span>
+        <button type="button" class="btn btn--quiet btn--sm" (click)="logout()">
+          Se déconnecter
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  @switch (page()) {
+    @case ('dashboard') {
+      <app-dashboard></app-dashboard>
+    }
+    @case ('events') {
+      <app-events></app-events>
+    }
+    @case ('search') {
+      <app-search></app-search>
+    }
+    @case ('import') {
+      <app-event-import></app-event-import>
+    }
   }
-  @case ('import') {
-    <app-event-import></app-event-import>
-  }
+} @else {
+  <app-login></app-login>
 }

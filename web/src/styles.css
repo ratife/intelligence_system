@@ -1,4 +1,70 @@
-/* You can add global styles to this file, and also import other style files */
+/*
+ * Socle visuel partagé de l'interface.
+ *
+ * Les écrans ne redéfinissent plus couleurs, espacements ni composants de base :
+ * ils consomment les tokens ci-dessous. Avant, `.page`, `.card`, `label`,
+ * `input`, `button` et `.error` étaient recopiés dans chaque feuille de style,
+ * avec cinq gris différents pour le même rôle de texte secondaire.
+ *
+ * Ces règles sont volontairement globales : l'encapsulation d'Angular ne
+ * s'applique qu'aux styles écrits *dans* un composant, donc un socle global
+ * traverse tous les écrans — c'est exactement ce qu'on veut d'un design system.
+ * Le CSS d'un composant ne garde que ce qui lui est propre.
+ */
+
+:root {
+  /* Surfaces */
+  --surface: #ffffff;
+  --surface-sunken: #f4f5f7;
+  --surface-muted: #f7f8fa;
+
+  /* Encres — un seul gris par rôle */
+  --text-primary: #1c1c1e;
+  --text-secondary: #52514e;
+  --text-muted: #86858a;
+  --text-on-accent: #ffffff;
+
+  /* Accent de marque */
+  --accent: #1a56db;
+  --accent-strong: #1544ad;
+  --accent-soft: #d8e3fa;
+  --accent-ink: #10357f;
+
+  /* Statuts : marques de données (palette validée) puis encres d'alerte */
+  --good: #0ca30c;
+  --warning: #fab219;
+  --critical: #d03b3b;
+  --error-ink: #b91c1c;
+  --error-surface: #fee2e2;
+  --warning-ink: #8a5a00;
+
+  /* Traits */
+  --hairline: #e8e8e4;
+  --border: #d5d8dd;
+
+  /* Rayons */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* Élévation */
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
+  --shadow-raised: 0 4px 12px rgba(16, 24, 40, 0.1);
+
+  /* Rythme d'espacement */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  /* Anneau de focus — un seul, partout */
+  --focus-ring: 0 0 0 3px rgba(26, 86, 219, 0.35);
+
+  color-scheme: light;
+}
 
 * {
   box-sizing: border-box;
@@ -9,9 +75,380 @@ body {
   font-family:
     system-ui,
     -apple-system,
-    "Segoe UI",
+    'Segoe UI',
     Roboto,
     sans-serif;
-  background: #f4f5f7;
-  color: #1c1c1e;
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Un seul anneau de focus visible pour tout ce qui est atteignable au clavier.
+   Il n'y en avait aucun : la navigation clavier était invisible. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* --- Coquille de page ----------------------------------------------------- */
+
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-5) 4rem;
+}
+
+.page h1 {
+  margin: 0 0 var(--space-1);
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  margin: 0 0 var(--space-5);
+  color: var(--text-secondary);
+  max-width: 60ch;
+}
+
+/* Intitulé court en capitales : en-têtes de compteurs, de colonnes, de sections. */
+.micro-label {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* --- Cartes --------------------------------------------------------------- */
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-card);
+}
+
+.card > h2:first-child {
+  margin-top: 0;
+}
+
+/* --- Formulaires ---------------------------------------------------------- */
+
+fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+}
+
+fieldset legend {
+  font-weight: 600;
+  padding: 0;
+  margin-bottom: var(--space-1);
+  width: 100%;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  flex: 1;
+  min-width: 160px;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  transition: border-color 120ms ease;
+}
+
+input:hover:not(:disabled),
+select:hover:not(:disabled) {
+  border-color: #b9bec7;
+}
+
+input:disabled,
+select:disabled {
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+input[type='file'] {
+  padding: var(--space-2);
+  cursor: pointer;
+}
+
+/* Un champ fichier ne doit jamais élargir son formulaire à cause d'un nom long. */
+.file-field {
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* --- Boutons -------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 0.55rem 1.1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-on-accent);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+.btn--primary:disabled {
+  background: var(--accent-soft);
+  border-color: var(--accent-soft);
+  color: #7d95c9;
+}
+
+.btn--quiet {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+
+.btn--quiet:hover:not(:disabled) {
+  background: var(--surface-muted);
+  border-color: #b9bec7;
+}
+
+.btn--quiet:disabled {
+  color: var(--text-muted);
+  background: var(--surface-sunken);
+}
+
+.btn--sm {
+  padding: 0.38rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+/* --- Messages ------------------------------------------------------------- */
+
+.alert {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+}
+
+.alert--error {
+  color: var(--error-ink);
+  background: var(--error-surface);
+}
+
+.alert--info {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+
+.note {
+  margin: var(--space-3) 0 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  max-width: 62ch;
+}
+
+code {
+  background: var(--surface-sunken);
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+/* --- Jauge ---------------------------------------------------------------- */
+/* Piste = teinte claire du même dégradé que le remplissage, pour que l'état se
+   lise sur toute la longueur de la barre. Partagée par le tableau de bord et le
+   suivi d'import. */
+
+.meter {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--accent-soft);
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 0 4px 4px 0;
+  transition: width 220ms ease-out;
+}
+
+.meter-fill--alert {
+  background: var(--critical);
+}
+
+/* --- Répartition part-à-tout ---------------------------------------------- */
+/* Séparation par le vide (2px de surface), jamais par un contour. Un statut
+   n'est jamais porté par la couleur seule : la légende ajoute icône et libellé. */
+
+.stack {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+}
+
+.stack-segment {
+  flex-basis: 0;
+  min-width: 4px;
+  background: var(--text-muted);
+}
+
+.stack-segment:first-child {
+  border-radius: 5px 0 0 5px;
+}
+
+.stack-segment:last-child {
+  border-radius: 0 5px 5px 0;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.legend b {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--text-muted);
+}
+
+.legend-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+  color: var(--text-muted);
+}
+
+:is(.stack-segment, .swatch).tone-good {
+  background: var(--good);
+}
+:is(.stack-segment, .swatch).tone-warning {
+  background: var(--warning);
+}
+:is(.stack-segment, .swatch).tone-critical {
+  background: var(--critical);
+}
+:is(.stack-segment, .swatch).tone-accent {
+  background: var(--accent);
+}
+
+/* --- Compteurs ------------------------------------------------------------ */
+/* Grille de tuiles séparées par un trait d'un pixel : le fond de la grille
+   traverse les interstices, on n'a donc pas de bordure à dessiner par tuile. */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1px;
+  margin: 0;
+  background: var(--hairline);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.tile {
+  background: var(--surface);
+  padding: var(--space-3) var(--space-4);
+}
+
+.tile dt {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.tile dd {
+  margin: var(--space-1) 0 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+/* --- Utilitaires ---------------------------------------------------------- */
+
+/* Contenu réservé aux lecteurs d'écran (libellés de jauges, légendes de tableaux). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .page {
+    padding: var(--space-5) var(--space-4) 3rem;
+  }
 }

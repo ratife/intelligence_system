@@ -1,23 +1,97 @@
+/* Barre de navigation. Boutons et tokens viennent du socle partagé
+   (`src/styles.css`). */
+
 .app-nav {
+  background: var(--surface);
+  border-bottom: 1px solid var(--hairline);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* Contenu aligné sur la largeur des pages, pas sur celle de l'écran. */
+.app-nav-inner {
   display: flex;
-  gap: 0.5rem;
-  padding: 1rem 1.5rem 0;
+  align-items: center;
+  gap: var(--space-1);
   max-width: 960px;
   margin: 0 auto;
+  padding: 0 var(--space-5);
 }
 
-.app-nav button {
-  padding: 0.6rem 1.1rem;
+.tab {
+  padding: var(--space-4) var(--space-3);
   border: none;
-  border-bottom: 3px solid transparent;
+  border-bottom: 2px solid transparent;
   background: transparent;
-  font-size: 1rem;
+  font: inherit;
+  font-size: 0.95rem;
   font-weight: 600;
-  color: #666;
+  color: var(--text-secondary);
   cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
 }
 
-.app-nav button.active {
-  color: #1a56db;
-  border-bottom-color: #1a56db;
+.tab:hover:not(.active) {
+  color: var(--text-primary);
+}
+
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* Le focus ne doit pas être rogné par le débordement de la barre. */
+.tab:focus-visible {
+  border-radius: var(--radius-sm);
+}
+
+/* --- Session -------------------------------------------------------------- */
+
+.session {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+.actor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  max-width: 16ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actor-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--good);
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  .app-nav-inner {
+    flex-wrap: wrap;
+    padding: 0 var(--space-4);
+    gap: 0 var(--space-1);
+  }
+
+  .tab {
+    padding: var(--space-3) var(--space-2);
+    font-size: 0.88rem;
+  }
+
+  .session {
+    width: 100%;
+    padding-bottom: var(--space-2);
+  }
 }

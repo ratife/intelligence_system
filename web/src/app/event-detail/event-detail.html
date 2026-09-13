@@ -1,0 +1,135 @@
+<div class="page">
+  <button type="button" class="btn btn--quiet btn--sm back" (click)="closed.emit()">
+    ← Tous les événements
+  </button>
+
+  <header class="detail-header">
+    <h1>{{ detail().event.description }}</h1>
+    <p class="subtitle">
+      {{ formatDate(detail().event.event_date) }} — {{ detail().event.address }}
+    </p>
+  </header>
+
+  @if (!detail().event.is_searchable) {
+    <p class="alert alert--info">
+      @if (detail().event.image_count === 0) {
+        Aucune image pour cet événement. Importez-en depuis l'onglet
+        <strong>Importer un événement</strong>.
+      } @else {
+        Aucun visage retenu sur cet événement : il ne peut pas ressortir d'une recherche, même avec
+        ses images indexées.
+      }
+    </p>
+  }
+
+  <dl class="tiles">
+    <div class="tile">
+      <dt>Images</dt>
+      <dd>{{ detail().event.image_count }}</dd>
+    </div>
+    <div class="tile">
+      <dt>Indexées</dt>
+      <dd>{{ detail().event.indexed_image_count }}</dd>
+    </div>
+    <div class="tile">
+      <dt>En attente</dt>
+      <dd>{{ detail().event.pending_image_count }}</dd>
+    </div>
+    <div class="tile">
+      <dt>Visages retenus</dt>
+      <dd>{{ detail().event.face_count }}</dd>
+    </div>
+    <div class="tile">
+      <dt>Visages écartés</dt>
+      <dd>{{ detail().event.discarded_face_count }}</dd>
+    </div>
+  </dl>
+
+  @if (detectedFaceCount() > 0) {
+    <section class="card">
+      <h2>Visages détectés</h2>
+      <p class="micro-label">
+        {{ detectedFaceCount() }} détecté(s) —
+        {{ percent(detail().event.quality_rejection_rate) }}&nbsp;% écarté(s) par le filtre qualité
+      </p>
+      <div class="stack">
+        @for (segment of faceSegments(); track segment.label) {
+          <span
+            class="stack-segment"
+            [class]="'tone-' + segment.tone"
+            [style.flexGrow]="segment.count"
+            [title]="segment.label + ' : ' + segment.count"
+          ></span>
+        }
+      </div>
+      <ul class="legend">
+        @for (segment of faceSegments(); track segment.label) {
+          <li>
+            <span class="swatch" [class]="'tone-' + segment.tone" aria-hidden="true"></span>
+            <span class="legend-icon" aria-hidden="true">{{ segment.icon }}</span>
+            {{ segment.label }} <b>{{ segment.count }}</b>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  @if (imageCards().length > 0) {
+    <h2 class="images-title">Images de l'événement</h2>
+
+    <div class="image-list">
+      @for (card of imageCards(); track card.image.image_id) {
+        <article class="card image-card">
+          <div class="image-media">
+            <app-face-frame
+              [src]="card.image.image_url"
+              [alt]="'Image ' + card.image.image_id + ' de ' + detail().event.description"
+              [boxes]="card.boxes"
+            />
+          </div>
+
+          <div class="image-facts">
+            <p class="status-line">
+              <span class="status-chip" [class]="'tone-' + card.status.tone">
+                <span aria-hidden="true">{{ card.status.icon }}</span>
+                {{ card.status.label }}
+              </span>
+              @if (card.image.indexed_at; as at) {
+                <span class="indexed-at">le {{ formatTimestamp(at) }}</span>
+              }
+            </p>
+
+            @if (card.image.indexed_faces.length > 0) {
+              <p class="face-count">
+                <b>{{ card.image.indexed_faces.length }}</b> visage(s) retenu(s), encadré(s) sur la
+                photo.
+              </p>
+            } @else if (card.image.index_status === 'done') {
+              <p class="face-count face-count--none">Aucun visage retenu sur cette image.</p>
+            }
+
+            @if (card.image.discarded_faces.length > 0) {
+              <div class="discarded">
+                <p class="micro-label">
+                  {{ card.image.discarded_faces.length }} visage(s) écarté(s)
+                </p>
+                <ul>
+                  @for (face of card.image.discarded_faces; track face.face_index) {
+                    <li>
+                      <span class="discarded-index">#{{ face.face_index }}</span>
+                      {{ humanizeReason(face.reason) }}
+                    </li>
+                  }
+                </ul>
+                <p class="note">
+                  Les visages écartés ne sont pas encadrés : leur position n'est pas conservée en
+                  base, seulement leur motif de rejet.
+                </p>
+              </div>
+            }
+          </div>
+        </article>
+      }
+    </div>
+  }
+</div>

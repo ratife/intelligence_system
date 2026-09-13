@@ -1,0 +1,29 @@
+<div class="frame">
+  <img [src]="src()" [alt]="alt()" loading="lazy" (load)="onLoad($event)" />
+
+  @for (box of placed(); track $index) {
+    <button
+      type="button"
+      class="face-box"
+      [class.face-box--selected]="box.tone === 'selected'"
+      [class.face-box--match]="box.tone === 'match'"
+      [class.face-box--pickable]="selectable()"
+      [style.left.%]="box.leftPct"
+      [style.top.%]="box.topPct"
+      [style.width.%]="box.widthPct"
+      [style.height.%]="box.heightPct"
+      [disabled]="!selectable()"
+      [attr.aria-hidden]="selectable() ? null : 'true'"
+      [attr.aria-pressed]="selectable() ? box.tone === 'selected' : null"
+      [attr.title]="box.title"
+      (click)="boxSelected.emit(box.index)"
+    >
+      @if (box.label) {
+        <span class="face-box-label">{{ box.label }}</span>
+      }
+      @if (selectable()) {
+        <span class="visually-hidden">{{ box.title }}</span>
+      }
+    </button>
+  }
+</div>

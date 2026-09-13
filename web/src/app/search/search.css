@@ -1,149 +1,193 @@
-.page {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
-}
-
-h1 {
-  margin-bottom: 0.25rem;
-}
-
-.subtitle {
-  margin-top: 0;
-  color: #555;
-}
+/* Coquille de page, cartes, champs, boutons et alertes viennent du socle
+   partagé (`src/styles.css`). Ne reste ici que ce qui est propre à la recherche. */
 
 .search-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  background: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  gap: var(--space-4);
+  align-items: stretch;
 }
 
-fieldset {
-  border: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  gap: 1.5rem;
-}
-
-fieldset legend {
-  font-weight: 600;
-  padding: 0;
-  margin-bottom: 0.25rem;
-}
-
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.9rem;
-  color: #333;
-  flex: 1;
-}
-
-input {
-  padding: 0.5rem 0.6rem;
-  border: 1px solid #d0d3d8;
-  border-radius: 6px;
-  font-size: 0.95rem;
-}
-
-.file-field {
-  max-width: 100%;
+.search-form > .btn {
+  align-self: flex-start;
 }
 
 .advanced summary {
   cursor: pointer;
   font-weight: 600;
-  color: #444;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  padding: var(--space-1) 0;
+}
+
+.advanced summary:hover {
+  color: var(--accent);
 }
 
 .advanced-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 1rem;
-  margin-top: 0.75rem;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+
+.advanced-grid label {
+  min-width: 0;
 }
 
 .hint {
+  margin: var(--space-3) 0 0;
   font-size: 0.85rem;
-  color: #777;
+  color: var(--text-muted);
+  max-width: 62ch;
 }
 
-button {
-  align-self: flex-start;
-  padding: 0.6rem 1.4rem;
-  border: none;
-  border-radius: 6px;
-  background: #1a56db;
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
+/* --- Photo requête : ce qui va être cherché, avant de le chercher ---------- */
+
+.query-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-md);
 }
 
-button:disabled {
-  background: #9db3e0;
-  cursor: not-allowed;
+.query-preview app-face-frame {
+  --frame-max-height: 360px;
 }
 
-.error {
-  color: #b91c1c;
-  background: #fee2e2;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  margin-top: 1rem;
+.query-preview .alert,
+.query-preview .note {
+  margin: 0;
+  max-width: 62ch;
 }
 
-.query-info,
+.preview-caption {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  max-width: 62ch;
+}
+
+.preview-caption .quality {
+  color: var(--text-muted);
+}
+
+/* --- Bandeau de contexte de la requête ------------------------------------ */
+
+.query-info {
+  margin: var(--space-5) 0 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  box-shadow: var(--shadow-card);
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
 .empty {
-  margin-top: 1.25rem;
-  color: #444;
+  margin: var(--space-5) 0 0;
+  padding: var(--space-5);
+  text-align: center;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
 }
+
+/* --- Résultats ------------------------------------------------------------ */
 
 .results {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1.25rem;
-  margin-top: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-5);
+  margin-top: var(--space-5);
 }
 
-.card {
-  background: white;
-  border-radius: 10px;
+.result {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 160ms ease;
 }
 
-.card img {
-  width: 100%;
-  height: 180px;
-  object-fit: cover;
-  display: block;
+.result:hover {
+  box-shadow: var(--shadow-raised);
 }
 
-.card-body {
-  padding: 0.9rem 1rem;
+/* La photo garde ses proportions : recadrée en `cover`, le cadre du visage ne
+   tomberait plus au bon endroit — c'est toute la valeur de la preuve. */
+.result-media {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-3);
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--hairline);
 }
 
-.card-body h2 {
-  font-size: 1.05rem;
-  margin: 0 0 0.35rem;
+.result-media app-face-frame {
+  --frame-max-height: 200px;
 }
 
-.card .meta {
-  margin: 0 0 0.5rem;
-  color: #666;
+.result-body {
+  padding: var(--space-4);
+}
+
+.result-body h2 {
+  font-size: 1.02rem;
+  margin: 0 0 var(--space-1);
+  letter-spacing: -0.01em;
+}
+
+.result .meta {
+  margin: 0;
+  color: var(--text-muted);
   font-size: 0.85rem;
 }
 
-.card .confidence {
+/* Le gros plan répond à « qui ? » là où le cadre répond à « où ? » : les deux
+   accompagnent le score, jamais le score seul. */
+.evidence {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--hairline);
+}
+
+.evidence app-face-crop {
+  --crop-size: 68px;
+}
+
+.evidence-scores {
+  min-width: 0;
+}
+
+.result .confidence {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
   margin: 0;
   font-size: 0.85rem;
-  font-weight: 600;
-  color: #1a56db;
+  color: var(--text-secondary);
+}
+
+.result .confidence b {
+  font-size: 1.05rem;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.result .similarity {
+  margin: var(--space-1) 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }

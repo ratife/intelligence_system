@@ -56,11 +56,44 @@ pip install -e ".[dev]"
 cp .env.example .env
 ```
 
-## Lancer l'infrastructure locale
+## Tout lancer en conteneurs
+
+```bash
+cp .env.example .env        # si ce n'est pas déjà fait
+docker compose --profile app up -d --build
+```
+
+Construit et démarre l'ensemble : infra, API, worker d'indexation et interface
+web. Le front est servi par nginx sur **http://localhost:8080**, qui relaie
+`/api/` vers l'API — le navigateur ne parle donc qu'à une seule origine, et
+`CORS_ALLOWED_ORIGINS` ne concerne plus que le serveur de dev Angular.
+
+La première construction est longue (~1 Go de dépendances, plus les poids
+InsightFace embarqués dans l'image pour qu'un conteneur neuf réponde sans
+télécharger 280 Mo au premier appel). L'API met ensuite ~1 à 2 minutes à charger
+les modèles ONNX avant de répondre.
+
+`S3_PUBLIC_ENDPOINT_URL` mérite une mention : l'API renvoie au navigateur des
+URLs S3 signées, et SigV4 signe l'en-tête `Host`. L'hôte qui apparaît dans
+l'URL doit donc être celui que le **navigateur** sait joindre, pas celui que
+l'API utilise en interne (`http://minio:9000`). La valeur par défaut
+(`http://localhost:9000`) convient quand le navigateur tourne sur la machine
+Docker ; sur un serveur, la remplacer par son nom public, sinon les photos ne
+s'affichent pas.
+
+Arrêt : `docker compose --profile app down`. **Le profil est nécessaire même
+pour arrêter** — sans lui, `down` ignore les services de profil et laisse l'API,
+le worker et le front en marche.
+
+## Lancer l'infrastructure seule (boucle de développement)
 
 ```bash
 docker compose up -d
 ```
+
+Sans `--profile app`, seuls Postgres, Redis et MinIO démarrent : c'est le mode
+attendu quand l'API, le worker et `ng serve` tournent sur la machine
+(`make start`), avec le rechargement à chaud.
 
 Démarre PostgreSQL+pgvector (schéma appliqué automatiquement via
 `migrations/0001_init.sql`), Redis et MinIO. Créer le bucket S3/MinIO utilisé

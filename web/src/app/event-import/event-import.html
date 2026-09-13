@@ -4,30 +4,22 @@
     Crée un événement (ou choisis-en un existant) et indexe réellement les images fournies.
   </p>
 
-  <form class="import-form" (ngSubmit)="onSubmit()">
-    <fieldset class="credentials">
-      <legend>Identification</legend>
-      <label>
-        Acteur (X-Actor-Id)
-        <input type="text" name="actorId" [(ngModel)]="credentials.actorId" placeholder="alice" required />
-      </label>
-      <label>
-        Jeton (Bearer)
-        <input
-          type="password"
-          name="bearerToken"
-          [(ngModel)]="credentials.bearerToken"
-          placeholder="change-me-in-production"
-          required
-        />
-      </label>
-    </fieldset>
-
+  <form class="card import-form" (ngSubmit)="onSubmit()">
     <div class="mode-tabs">
-      <button type="button" [class.active]="mode === 'new'" (click)="selectMode('new')">
+      <button
+        type="button"
+        [class.active]="mode === 'new'"
+        [disabled]="running()"
+        (click)="selectMode('new')"
+      >
         Nouvel événement
       </button>
-      <button type="button" [class.active]="mode === 'existing'" (click)="selectMode('existing')">
+      <button
+        type="button"
+        [class.active]="mode === 'existing'"
+        [disabled]="running()"
+        (click)="selectMode('existing')"
+      >
         Événement existant
       </button>
     </div>
@@ -62,47 +54,118 @@
             }
           </select>
         </label>
-        <button type="button" class="refresh" (click)="refreshEvents()">Rafraîchir la liste</button>
+        <button type="button" class="btn btn--quiet btn--sm" (click)="refreshEvents()">
+          Rafraîchir la liste
+        </button>
       </fieldset>
     }
 
-    <label class="file-field">
-      Images à importer (plusieurs possibles)
-      <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" required />
-    </label>
+    <fieldset
+      class="photo-field"
+      (dragenter)="onDragEnter($event)"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDrop($event)"
+    >
+      <legend>Photos de l'événement</legend>
 
-    <button type="submit" [disabled]="loading()">
-      {{ loading() ? 'Import en cours…' : 'Importer et indexer' }}
+      <div class="dropzone" [class.dropzone--active]="dragging()">
+        <p class="dropzone-title">
+          <span aria-hidden="true">⤓</span>
+          Glissez vos photos ici — un dossier entier fonctionne aussi
+        </p>
+        <label class="file-field">
+          <span class="dropzone-or">ou choisissez-les sur votre disque</span>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            [disabled]="running()"
+            (change)="onFilesSelected($event)"
+          />
+        </label>
+        <p class="dropzone-hint">
+          Sélectionnez-en plusieurs à la fois, et revenez autant de fois que nécessaire : chaque
+          dépôt <strong>s'ajoute</strong> à la liste au lieu de la remplacer.
+        </p>
+      </div>
+
+      @if (readingDrop()) {
+        <p class="note">Lecture des fichiers déposés…</p>
+      }
+
+      @if (photos().length > 0) {
+        <div class="selection-head">
+          <p class="micro-label">{{ photos().length }} photo(s) — {{ totalSizeLabel() }}</p>
+          <button
+            type="button"
+            class="btn btn--quiet btn--sm"
+            [disabled]="running()"
+            (click)="clearPhotos()"
+          >
+            Tout retirer
+          </button>
+        </div>
+
+        <ul class="photo-list">
+          @for (photo of photos(); track photo.key) {
+            <li [class.photo--oversized]="photo.tooLarge">
+              <span class="photo-name" [title]="photo.file.name">{{ photo.file.name }}</span>
+              <span class="photo-size">{{ formatSize(photo.file.size) }}</span>
+              @if (photo.tooLarge) {
+                <span class="photo-flag"> <span aria-hidden="true">⚠</span> Trop volumineuse </span>
+              }
+              <button
+                type="button"
+                class="photo-remove"
+                [disabled]="running()"
+                [attr.aria-label]="'Retirer ' + photo.file.name"
+                (click)="removePhoto(photo.key)"
+              >
+                <span aria-hidden="true">✕</span>
+              </button>
+            </li>
+          }
+        </ul>
+
+        @if (ignoredDuplicates() > 0) {
+          <p class="note">
+            {{ ignoredDuplicates() }} photo(s) déjà présente(s) dans la liste, ignorée(s).
+          </p>
+        }
+
+        @if (ignoredNonImages() > 0) {
+          <p class="note">
+            {{ ignoredNonImages() }} fichier(s) ignoré(s) : ce ne sont pas des images.
+          </p>
+        }
+
+        @if (oversizedCount() > 0) {
+          <p class="alert alert--error" role="alert">
+            {{ oversizedCount() }} photo(s) dépasse(nt) la limite de 10 Mo de l'API. Retirez-les
+            pour lancer l'import — elles échoueraient de toute façon.
+          </p>
+        }
+      }
+    </fieldset>
+
+    <button type="submit" class="btn btn--primary" [disabled]="!canSubmit()">
+      {{ running() ? 'Import en cours…' : 'Importer et indexer' }}
     </button>
   </form>
 
   @if (error()) {
-    <p class="error">{{ error() }}</p>
+    <p class="alert alert--error" role="alert">{{ error() }}</p>
   }
 
-  @if (results().length > 0) {
-    <div class="results">
-      <h2>Résultat — événement #{{ resultEventId() }}</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Fichier</th>
-            <th>Statut</th>
-            <th>Visages acceptés</th>
-            <th>Visages rejetés</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (result of results(); track result.image_id) {
-            <tr>
-              <td>{{ result.filename }}</td>
-              <td>{{ result.duplicate ? 'déjà importé' : 'importé' }}</td>
-              <td>{{ result.faces_accepted }}</td>
-              <td>{{ result.faces_rejected }}</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+  @if (items().length > 0) {
+    <app-import-progress
+      [items]="items()"
+      [running]="running()"
+      [startedAt]="startedAt()"
+      [finishedAt]="finishedAt()"
+      [eventId]="resultEventId()"
+      (cancelRequested)="cancelRun()"
+    />
   }
 </div>

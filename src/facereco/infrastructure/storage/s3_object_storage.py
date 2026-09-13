@@ -6,6 +6,7 @@ sources restent dans le stockage objet, jamais en base (§5, P2/P6).
 
 from __future__ import annotations
 
+from typing import Any
 from urllib.parse import urlparse
 
 import boto3
@@ -21,14 +22,34 @@ def _parse_s3_uri(storage_uri: str) -> tuple[str, str]:
 
 
 class S3ObjectStorage(ObjectStoragePort):
+    """Deux clients quand le service et le navigateur n'atteignent pas le stockage
+    par le même hôte — cas normal dès qu'on conteneurise.
+
+    `get_image_bytes` est un appel serveur : il passe par le réseau interne.
+    `build_signed_url` produit une URL consommée par le navigateur, et SigV4 signe
+    l'en-tête Host : réécrire l'hôte après signature invaliderait la signature, il
+    faut donc signer directement avec l'endpoint public. Sans `public_endpoint_url`
+    les deux clients n'en font qu'un — le mode dev, où tout est sur localhost.
+    """
+
     def __init__(
         self,
         endpoint_url: str,
         access_key: str,
         secret_key: str,
         region: str = "us-east-1",
+        public_endpoint_url: str = "",
     ) -> None:
-        self._client = boto3.client(
+        self._client = self._build_client(endpoint_url, access_key, secret_key, region)
+        self._signing_client = (
+            self._build_client(public_endpoint_url, access_key, secret_key, region)
+            if public_endpoint_url and public_endpoint_url != endpoint_url
+            else self._client
+        )
+
+    @staticmethod
+    def _build_client(endpoint_url: str, access_key: str, secret_key: str, region: str) -> Any:
+        return boto3.client(
             "s3",
             endpoint_url=endpoint_url,
             aws_access_key_id=access_key,
@@ -44,7 +65,7 @@ class S3ObjectStorage(ObjectStoragePort):
     def build_signed_url(self, storage_uri: str, expires_in_seconds: int = 300) -> str:
         bucket, key = _parse_s3_uri(storage_uri)
         return str(
-            self._client.generate_presigned_url(
+            self._signing_client.generate_presigned_url(
                 "get_object",
                 Params={"Bucket": bucket, "Key": key},
                 ExpiresIn=expires_in_seconds,

@@ -1,3 +1,13 @@
+# Deux usages dans un seul fichier, séparés par le profil `app` :
+#
+#   docker compose up -d                      # infra seule — Postgres, Redis, MinIO
+#   docker compose --profile app up -d --build  # + API, worker et interface web
+#
+# Le profil existe parce que la boucle de dev (`make start`) fait tourner l'API,
+# le worker et `ng serve` sur la machine, contre cette même infra : sans lui, un
+# `docker compose up` reconstruirait ~1 Go d'images et occuperait le port 8000
+# que `uvicorn --reload` réclame.
+
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -42,6 +52,83 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  # ---------------------------------------------------------------------------
+  # Application. Le bucket S3 n'a pas de service d'amorçage : `ensure_bucket`
+  # (infrastructure/devtools/event_import.py) le crée au premier import.
+  # ---------------------------------------------------------------------------
+
+  api:
+    profiles: ["app"]
+    build:
+      context: .
+      target: api
+    # `.env` reste la source unique du réglage applicatif (seuils, modèle, quota,
+    # jeton) ; seules les adresses ci-dessous en sont reprises, parce qu'elles y
+    # pointent vers localhost — c'est-à-dire vers le conteneur lui-même.
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://facereco:facereco@postgres:5432/facereco
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+      # Les URLs d'images sont signées pour le navigateur, pas pour l'API : leur
+      # hôte doit être celui du poste client. Sur un serveur, remplacer localhost
+      # par le nom public de la machine, sinon les photos ne s'afficheront pas.
+      S3_PUBLIC_ENDPOINT_URL: ${S3_PUBLIC_ENDPOINT_URL:-http://localhost:9000}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    profiles: ["app"]
+    build:
+      context: .
+      target: worker
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://facereco:facereco@postgres:5432/facereco
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    # Monter en charge se fait ici (`--scale worker=3`) : chaque process dérive
+    # son propre nom de consommateur Redis, les réplicas ne se volent donc pas
+    # leurs messages en vol.
+    restart: unless-stopped
+
+  web:
+    profiles: ["app"]
+    build:
+      context: web
+      args:
+        # Vide : le front émet des appels relatifs (/api/v1/...) que nginx relaie
+        # vers l'API. Même origine côté navigateur, donc pas de CORS en jeu — le
+        # `cors_allowed_origins` de l'API ne sert plus qu'au dev sur :4200.
+        API_BASE_URL: ""
+    environment:
+      API_UPSTREAM: http://api:8000
+    ports:
+      - "8080:80"
+    # `service_started` et non `service_healthy` : nginx résout l'amont `api` au
+    # chargement de sa configuration et refuserait de démarrer sur un nom inconnu,
+    # mais il n'a aucune raison d'attendre les deux minutes de chargement ONNX —
+    # les fichiers statiques, eux, sont servables tout de suite.
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
 
 volumes:
   postgres_data:

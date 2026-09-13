@@ -1,0 +1,119 @@
+/* Coquille de page, cartes, boutons, barres et alertes viennent du socle partagé
+   (`src/styles.css`). Ne reste ici que ce qui est propre à la liste. */
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.count-line {
+  margin: 0 0 var(--space-4);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.event-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4);
+}
+
+/* Toute la carte est cliquable, mais l'unique élément focusable reste le bouton
+   du titre : un `<button>` englobant du contenu de bloc serait invalide, et un
+   `role="button"` sur la carte doublerait la cible pour un lecteur d'écran. */
+.event-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  transition: box-shadow 160ms ease;
+}
+
+.event-card:hover {
+  box-shadow: var(--shadow-raised);
+}
+
+.event-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.event-title {
+  margin: 0;
+  font-size: 1.02rem;
+  letter-spacing: -0.01em;
+  min-width: 0;
+}
+
+.event-open {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.event-open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.event-open:hover {
+  color: var(--accent);
+}
+
+.event-open:focus-visible {
+  outline: none;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--focus-ring);
+}
+
+.event-date {
+  flex: none;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.event-address {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.event-facts {
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.event-facts b {
+  font-variant-numeric: tabular-nums;
+}
+
+.unsearchable {
+  margin: var(--space-1) 0 0;
+  font-size: 0.82rem;
+  color: var(--warning-ink);
+}
+
+.load-more {
+  margin-top: var(--space-5);
+}

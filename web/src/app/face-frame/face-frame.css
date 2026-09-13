@@ -1,0 +1,100 @@
+:host {
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+}
+
+/* Le conteneur épouse l'image au pixel près : les cadres sont positionnés en
+   pourcentages de *cette* boîte, tout letterboxing les décalerait. */
+.frame {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  max-width: 100%;
+}
+
+.frame img {
+  display: block;
+  max-width: 100%;
+  max-height: var(--frame-max-height, none);
+  height: auto;
+  width: auto;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+}
+
+/* Un cadre se pose sur une photo quelconque : ni le blanc ni l'accent ne sont
+   lisibles sur tous les fonds. D'où le liseré sombre de part et d'autre du
+   trait coloré — un contraste garanti, pas une couleur de palette. */
+.face-box {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 2px solid var(--face-box-color, var(--accent));
+  border-radius: var(--radius-sm);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+  cursor: default;
+}
+
+.face-box--selected {
+  --face-box-color: var(--accent);
+}
+
+.face-box--match {
+  --face-box-color: var(--good);
+}
+
+/* Visage détecté mais non retenu : présent, en retrait, et distinct au trait
+   (pointillés) autant qu'à la couleur. */
+.face-box:not(.face-box--selected):not(.face-box--match) {
+  --face-box-color: var(--surface);
+  border-style: dashed;
+  opacity: 0.85;
+}
+
+.face-box--pickable {
+  cursor: pointer;
+}
+
+.face-box--pickable:hover {
+  --face-box-color: var(--accent);
+  border-style: solid;
+  opacity: 1;
+}
+
+.face-box--pickable:focus-visible {
+  outline: none;
+  box-shadow:
+    var(--focus-ring),
+    0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+/* Pastille dans le coin du cadre : reste visible même quand le visage touche
+   le bord de la photo, ce qu'un intitulé posé au-dessus ne ferait pas. */
+.face-box-label {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  padding: 0.1rem 0.35rem;
+  background: var(--face-box-color, var(--accent));
+  color: var(--text-on-accent);
+  border-radius: var(--radius-sm) 0 var(--radius-sm) 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* La pastille d'un visage non retenu est claire : son texte doit s'inverser. */
+.face-box:not(.face-box--selected):not(.face-box--match) .face-box-label {
+  color: var(--text-primary);
+}
+
+/* Au survol, le cadre passe à l'accent : la pastille repasse en clair. */
+.face-box--pickable:hover .face-box-label {
+  color: var(--text-on-accent);
+}

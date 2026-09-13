@@ -1,17 +1,24 @@
 /**
- * Miroir TypeScript de `SearchResponseSchema`
- * (src/facereco/interface/api/schemas/search.py) — POST /api/v1/search/by-face.
+ * Miroir TypeScript des schemas de `src/facereco/interface/api/schemas/search.py`
+ * — POST /api/v1/search/faces et POST /api/v1/search/by-face.
  */
 
-export interface FaceUsed {
+/** Un visage détecté dans la photo requête. `bbox` = `[x, y, largeur, hauteur]` en pixels. */
+export interface QueryFace {
   index: number;
   bbox: number[];
   quality: number;
 }
 
+/** Réponse de la détection préalable : aucune recherche n'a été lancée. */
+export interface QueryFacesResponse {
+  faces_detected: number;
+  faces: QueryFace[];
+}
+
 export interface SearchQueryInfo {
   faces_detected: number;
-  face_used: FaceUsed;
+  face_used: QueryFace;
   model_version: string;
 }
 
@@ -48,4 +55,11 @@ export interface SearchParams {
   dateFrom?: string;
   dateTo?: string;
   limit?: number;
+}
+
+/** Miroir de `DetectQueryFacesCommand` : l'image seule, sans filtre ni quota. */
+export interface DetectFacesParams {
+  actorId: string;
+  bearerToken: string;
+  image: File;
 }

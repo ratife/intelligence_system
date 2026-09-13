@@ -1,0 +1,11 @@
+<div class="crop">
+  <img
+    [src]="src()"
+    [alt]="alt()"
+    [class.crop-image--placed]="placement() !== null"
+    [style.width.%]="placement()?.widthPct"
+    [style.left.%]="placement()?.leftPct"
+    [style.top.%]="placement()?.topPct"
+    (load)="onLoad($event)"
+  />
+</div>
