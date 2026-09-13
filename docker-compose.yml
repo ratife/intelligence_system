@@ -37,7 +37,12 @@ services:
       retries: 10
 
   minio:
-    image: minio/minio:latest
+    # Quay et non Docker Hub : `minio/minio` y est devenu non tirable
+    # anonymement (401), ce qui ne se voit pas sur une machine dont le cache
+    # garde une vieille image, et casse net tout déploiement neuf.
+    # Tag épinglé pour la même raison : `latest` laissait chaque machine figée
+    # sur la version du jour où elle avait tiré.
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
