@@ -21,7 +21,10 @@
   /* Encres — un seul gris par rôle */
   --text-primary: #1c1c1e;
   --text-secondary: #52514e;
-  --text-muted: #86858a;
+  /* 4,97:1 sur la carte, 4,56:1 sur la page — au-dessus du seuil AA. La
+     valeur précédente (#86858a) plafonnait à 3,66:1, donc sous le seuil,
+     alors qu'elle porte les intitulés de compteurs et de colonnes. */
+  --text-muted: #706f76;
   --text-on-accent: #ffffff;
 
   /* Accent de marque */
@@ -33,6 +36,11 @@
 
   /* Statuts : marques de données (palette validée) puis encres d'alerte */
   --good: #0ca30c;
+  /* `--good` est une marque de données : validée à 3:1, seuil des repères
+     graphiques, et elle le tient. Un fond de texte en demande 4,5 — blanc
+     dessus ne donne que 3,35:1. D'où ce vert plus sombre, réservé aux
+     pastilles pleines ; la palette de données, elle, ne bouge pas. */
+  --good-strong: #098309;
   --warning: #fab219;
   --critical: #d03b3b;
   --error-ink: #b91c1c;

@@ -284,6 +284,15 @@ must stay empty. `face-frame.css` is the one exemption, and a deliberate one:
 its face boxes carry black halos so the outline reads on *any* photograph — a
 guaranteed contrast, not a palette colour.
 
+Two contrast failures were found by measuring the palette rather than looking at
+it, and both predate any theme work. `--text-muted` gave 3.66:1 on a card —
+below the 4.5 AA floor — while carrying the counter and column labels; it is now
+`#706f76` (4.97:1). And `.status-chip.tone-good` put white on `--good` at
+3.35:1: a *data mark* colour, validated at the 3:1 the chart marks need and
+meeting it, reused as a *text background*, which demands 4.5. Hence
+`--good-strong`, for filled chips only — the data palette itself does not move.
+Keep new ink/surface pairs above that floor, and measure rather than eyeball.
+
 **The whole UI sits behind a login gate.** `app.html` renders `<app-login>`
 (`login/`) until `AuthCredentialsService.unlocked()` is true; only then do the
 tabs and their content exist. The "password" on that screen *is* the shared

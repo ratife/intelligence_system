@@ -69,7 +69,7 @@
 }
 
 .status-chip.tone-good {
-  background: var(--good);
+  background: var(--good-strong);
 }
 
 .status-chip.tone-accent {
