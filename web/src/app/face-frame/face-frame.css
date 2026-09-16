@@ -25,7 +25,9 @@
 
 /* Un cadre se pose sur une photo quelconque : ni le blanc ni l'accent ne sont
    lisibles sur tous les fonds. D'où le liseré sombre de part et d'autre du
-   trait coloré — un contraste garanti, pas une couleur de palette. */
+   trait coloré — un contraste garanti, pas une couleur de palette. Ce sont les
+   seules valeurs littérales restantes de la feuille : elles ne suivent pas le
+   thème, et ne le doivent pas — une photo reste une photo en mode sombre. */
 .face-box {
   position: absolute;
   margin: 0;

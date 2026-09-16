@@ -284,6 +284,23 @@ must stay empty. `face-frame.css` is the one exemption, and a deliberate one:
 its face boxes carry black halos so the outline reads on *any* photograph — a
 guaranteed contrast, not a palette colour.
 
+**Both themes come from the same tokens.** `styles.css` declares
+`color-scheme: light dark` and a `@media (prefers-color-scheme: dark)` block that
+redefines the colour tokens and nothing else — no layout rule is duplicated, and
+every screen follows for free (the whole second theme costs 40 bytes in the
+built stylesheet). There is no in-app toggle: no preferences screen exists to
+hold one, and the OS setting is the answer the user already gave. Two things to
+preserve when touching the palette:
+
+- **Every colour token must exist in both blocks.** The four soft tints
+  (`--accent-soft`, `--good-soft`, `--warning-soft`, `--critical-soft`) are the
+  exception: they are `color-mix()` of a status colour into `var(--surface)`, so
+  they re-derive per theme on their own. Prefer that over a second literal.
+- **`--text-on-accent` is dark in the dark theme**, and that inversion is load
+  bearing. The accent has to be lightened to stand off a near-black page, and
+  white on that lighter blue falls to 3.2:1 — under AA. One colour cannot be
+  both light enough to read on black and dark enough to carry white text.
+
 Two contrast failures were found by measuring the palette rather than looking at
 it, and both predate any theme work. `--text-muted` gave 3.66:1 on a card —
 below the 4.5 AA floor — while carrying the counter and column labels; it is now
