@@ -27,8 +27,9 @@
   /* Accent de marque */
   --accent: #1a56db;
   --accent-strong: #1544ad;
-  --accent-soft: #d8e3fa;
   --accent-ink: #10357f;
+  /* Encre d'un bouton primaire désactivé, posée sur --accent-soft. */
+  --accent-on-soft: #7d95c9;
 
   /* Statuts : marques de données (palette validée) puis encres d'alerte */
   --good: #0ca30c;
@@ -38,9 +39,20 @@
   --error-surface: #fee2e2;
   --warning-ink: #8a5a00;
 
+  /* Teintes douces — fonds de pastilles, pistes de jauge, bandeaux d'info.
+     Dérivées de la couleur de statut et de la surface plutôt que figées : une
+     valeur en dur serait à recalculer pour chaque thème, et c'est très
+     exactement ainsi que quatre `rgba()` recopiant ces mêmes couleurs avaient
+     fini par diverger dans les composants. */
+  --accent-soft: color-mix(in srgb, var(--accent) 17%, var(--surface));
+  --good-soft: color-mix(in srgb, var(--good) 14%, var(--surface));
+  --warning-soft: color-mix(in srgb, var(--warning) 20%, var(--surface));
+  --critical-soft: color-mix(in srgb, var(--critical) 14%, var(--surface));
+
   /* Traits */
   --hairline: #e8e8e4;
   --border: #d5d8dd;
+  --border-hover: #b9bec7;
 
   /* Rayons */
   --radius-sm: 6px;
@@ -65,6 +77,7 @@
 
   color-scheme: light;
 }
+
 
 * {
   box-sizing: border-box;
@@ -189,7 +202,7 @@ textarea {
 
 input:hover:not(:disabled),
 select:hover:not(:disabled) {
-  border-color: #b9bec7;
+  border-color: var(--border-hover);
 }
 
 input:disabled,
@@ -248,7 +261,7 @@ input[type='file'] {
 .btn--primary:disabled {
   background: var(--accent-soft);
   border-color: var(--accent-soft);
-  color: #7d95c9;
+  color: var(--accent-on-soft);
 }
 
 .btn--quiet {
@@ -259,7 +272,7 @@ input[type='file'] {
 
 .btn--quiet:hover:not(:disabled) {
   background: var(--surface-muted);
-  border-color: #b9bec7;
+  border-color: var(--border-hover);
 }
 
 .btn--quiet:disabled {
@@ -398,6 +411,59 @@ code {
 }
 :is(.stack-segment, .swatch).tone-accent {
   background: var(--accent);
+}
+
+/* --- Pastilles de statut -------------------------------------------------- */
+/* Un statut n'est jamais porté par la couleur seule : la pastille associe
+   toujours une icône et un libellé. `tone-active` et `tone-accent` désignent le
+   même bleu — le premier vient des statuts de la file d'import, le second d'un
+   état du worker ; les deux noms restent parce qu'ils disent des choses
+   différentes à l'endroit où ils sont écrits. */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.chip-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+  color: var(--text-muted);
+}
+
+.chip.tone-good {
+  background: var(--good-soft);
+}
+.chip.tone-good .chip-icon {
+  color: var(--good);
+}
+
+.chip.tone-warning {
+  background: var(--warning-soft);
+}
+.chip.tone-warning .chip-icon {
+  color: var(--warning-ink);
+}
+
+.chip.tone-critical {
+  background: var(--critical-soft);
+}
+.chip.tone-critical .chip-icon {
+  color: var(--critical);
+}
+
+.chip:is(.tone-accent, .tone-active) {
+  background: var(--accent-soft);
+}
+.chip:is(.tone-accent, .tone-active) .chip-icon {
+  color: var(--accent);
 }
 
 /* --- Compteurs ------------------------------------------------------------ */

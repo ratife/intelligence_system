@@ -259,13 +259,30 @@ the app-level primitives: `.page`/`.subtitle`/`.micro-label`, `.card`,
 `.btn` + `.btn--primary`/`.btn--quiet`/`.btn--sm`, `.alert--error`/`.alert--info`,
 the form control base styles, and the shared data-viz pieces used by both the
 dashboard and the import progress panel (`.meter`, `.stack`/`.legend`/`.swatch`
-+ `.tone-*`, `.tiles`/`.tile`). These are deliberately **global**: Angular's
-view encapsulation only scopes styles written inside a component, so a global
-base is what lets one system reach every screen. A component's own `.css` keeps
-only what is genuinely local to it — no colors in hex, no re-declared page
-shell, card or button. Before adding a rule, check whether the token or
-primitive already exists; before hardcoding a color, add or reuse a token.
-`grep -n "#[0-9a-fA-F]\{3,6\}" web/src/app/*/*.css` must stay empty.
++ `.tone-*`, `.tiles`/`.tile`, `.chip`/`.chip-icon`). These are deliberately
+**global**: Angular's view encapsulation only scopes styles written inside a
+component, so a global base is what lets one system reach every screen. A
+component's own `.css` keeps only what is genuinely local to it — no literal
+colors, no re-declared page shell, card or button. Before adding a rule, check
+whether the token or primitive already exists; before hardcoding a color, add or
+reuse a token.
+
+**The guard covers `styles.css` too, and it is not only about hex.** The earlier
+rule (hex under `web/src/app/*/*.css`) left two blind spots that both filled up:
+`styles.css` itself was never scanned, and `rgba()` was never matched — so three
+greys and four status tints ended up recopied as literals, the second set
+duplicating token values they then drifted from. The replacement targets the
+properties that actually carry a palette colour, which keeps token definitions
+and `box-shadow` out of it by construction:
+
+```bash
+grep -nE '^[[:space:]]*(color|background|background-color|border|border-[a-z]+-color|border-color|fill|stroke)[[:space:]]*:[^;]*(#[0-9a-fA-F]{3,8}|rgba?\(|hsla?\()' \
+  web/src/styles.css web/src/app/*/*.css | grep -v face-frame
+```
+
+must stay empty. `face-frame.css` is the one exemption, and a deliberate one:
+its face boxes carry black halos so the outline reads on *any* photograph — a
+guaranteed contrast, not a palette colour.
 
 **The whole UI sits behind a login gate.** `app.html` renders `<app-login>`
 (`login/`) until `AuthCredentialsService.unlocked()` is true; only then do the
