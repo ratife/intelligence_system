@@ -259,13 +259,56 @@ the app-level primitives: `.page`/`.subtitle`/`.micro-label`, `.card`,
 `.btn` + `.btn--primary`/`.btn--quiet`/`.btn--sm`, `.alert--error`/`.alert--info`,
 the form control base styles, and the shared data-viz pieces used by both the
 dashboard and the import progress panel (`.meter`, `.stack`/`.legend`/`.swatch`
-+ `.tone-*`, `.tiles`/`.tile`). These are deliberately **global**: Angular's
-view encapsulation only scopes styles written inside a component, so a global
-base is what lets one system reach every screen. A component's own `.css` keeps
-only what is genuinely local to it — no colors in hex, no re-declared page
-shell, card or button. Before adding a rule, check whether the token or
-primitive already exists; before hardcoding a color, add or reuse a token.
-`grep -n "#[0-9a-fA-F]\{3,6\}" web/src/app/*/*.css` must stay empty.
++ `.tone-*`, `.tiles`/`.tile`, `.chip`/`.chip-icon`). These are deliberately
+**global**: Angular's view encapsulation only scopes styles written inside a
+component, so a global base is what lets one system reach every screen. A
+component's own `.css` keeps only what is genuinely local to it — no literal
+colors, no re-declared page shell, card or button. Before adding a rule, check
+whether the token or primitive already exists; before hardcoding a color, add or
+reuse a token.
+
+**The guard covers `styles.css` too, and it is not only about hex.** The earlier
+rule (hex under `web/src/app/*/*.css`) left two blind spots that both filled up:
+`styles.css` itself was never scanned, and `rgba()` was never matched — so three
+greys and four status tints ended up recopied as literals, the second set
+duplicating token values they then drifted from. The replacement targets the
+properties that actually carry a palette colour, which keeps token definitions
+and `box-shadow` out of it by construction:
+
+```bash
+grep -nE '^[[:space:]]*(color|background|background-color|border|border-[a-z]+-color|border-color|fill|stroke)[[:space:]]*:[^;]*(#[0-9a-fA-F]{3,8}|rgba?\(|hsla?\()' \
+  web/src/styles.css web/src/app/*/*.css | grep -v face-frame
+```
+
+must stay empty. `face-frame.css` is the one exemption, and a deliberate one:
+its face boxes carry black halos so the outline reads on *any* photograph — a
+guaranteed contrast, not a palette colour.
+
+**Both themes come from the same tokens.** `styles.css` declares
+`color-scheme: light dark` and a `@media (prefers-color-scheme: dark)` block that
+redefines the colour tokens and nothing else — no layout rule is duplicated, and
+every screen follows for free (the whole second theme costs 40 bytes in the
+built stylesheet). There is no in-app toggle: no preferences screen exists to
+hold one, and the OS setting is the answer the user already gave. Two things to
+preserve when touching the palette:
+
+- **Every colour token must exist in both blocks.** The four soft tints
+  (`--accent-soft`, `--good-soft`, `--warning-soft`, `--critical-soft`) are the
+  exception: they are `color-mix()` of a status colour into `var(--surface)`, so
+  they re-derive per theme on their own. Prefer that over a second literal.
+- **`--text-on-accent` is dark in the dark theme**, and that inversion is load
+  bearing. The accent has to be lightened to stand off a near-black page, and
+  white on that lighter blue falls to 3.2:1 — under AA. One colour cannot be
+  both light enough to read on black and dark enough to carry white text.
+
+Two contrast failures were found by measuring the palette rather than looking at
+it, and both predate any theme work. `--text-muted` gave 3.66:1 on a card —
+below the 4.5 AA floor — while carrying the counter and column labels; it is now
+`#706f76` (4.97:1). And `.status-chip.tone-good` put white on `--good` at
+3.35:1: a *data mark* colour, validated at the 3:1 the chart marks need and
+meeting it, reused as a *text background*, which demands 4.5. Hence
+`--good-strong`, for filled chips only — the data palette itself does not move.
+Keep new ink/surface pairs above that floor, and measure rather than eyeball.
 
 **The whole UI sits behind a login gate.** `app.html` renders `<app-login>`
 (`login/`) until `AuthCredentialsService.unlocked()` is true; only then do the

@@ -139,22 +139,6 @@
   color: var(--text-secondary);
 }
 
-.chip.tone-good .chip-icon {
-  color: var(--good);
-}
-.chip.tone-muted .chip-icon {
-  color: var(--text-muted);
-}
-.chip.tone-critical .chip-icon {
-  color: var(--critical);
-}
-.chip.tone-active .chip-icon {
-  color: var(--accent);
-}
-.chip.tone-pending .chip-icon {
-  color: var(--text-muted);
-}
-
 /* --- Détail image par image --------------------------------------------- */
 
 .detail {
@@ -193,32 +177,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: var(--radius-pill);
-  background: var(--surface-sunken);
-  color: var(--text-primary);
-  font-size: 0.78rem;
-  white-space: nowrap;
-}
-
-.chip.tone-good {
-  background: rgba(12, 163, 12, 0.1);
-}
-.chip.tone-critical {
-  background: rgba(208, 59, 59, 0.1);
-}
-.chip.tone-active {
-  background: rgba(26, 86, 219, 0.1);
-}
-
-.chip-icon {
-  font-size: 0.85rem;
-  line-height: 1;
-}
 
 .detail-cell {
   display: flex;

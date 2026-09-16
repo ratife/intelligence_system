@@ -21,26 +21,46 @@
   /* Encres — un seul gris par rôle */
   --text-primary: #1c1c1e;
   --text-secondary: #52514e;
-  --text-muted: #86858a;
+  /* 4,97:1 sur la carte, 4,56:1 sur la page — au-dessus du seuil AA. La
+     valeur précédente (#86858a) plafonnait à 3,66:1, donc sous le seuil,
+     alors qu'elle porte les intitulés de compteurs et de colonnes. */
+  --text-muted: #706f76;
   --text-on-accent: #ffffff;
 
   /* Accent de marque */
   --accent: #1a56db;
   --accent-strong: #1544ad;
-  --accent-soft: #d8e3fa;
   --accent-ink: #10357f;
+  /* Encre d'un bouton primaire désactivé, posée sur --accent-soft. */
+  --accent-on-soft: #7d95c9;
 
   /* Statuts : marques de données (palette validée) puis encres d'alerte */
   --good: #0ca30c;
+  /* `--good` est une marque de données : validée à 3:1, seuil des repères
+     graphiques, et elle le tient. Un fond de texte en demande 4,5 — blanc
+     dessus ne donne que 3,35:1. D'où ce vert plus sombre, réservé aux
+     pastilles pleines ; la palette de données, elle, ne bouge pas. */
+  --good-strong: #098309;
   --warning: #fab219;
   --critical: #d03b3b;
   --error-ink: #b91c1c;
   --error-surface: #fee2e2;
   --warning-ink: #8a5a00;
 
+  /* Teintes douces — fonds de pastilles, pistes de jauge, bandeaux d'info.
+     Dérivées de la couleur de statut et de la surface plutôt que figées : une
+     valeur en dur serait à recalculer pour chaque thème, et c'est très
+     exactement ainsi que quatre `rgba()` recopiant ces mêmes couleurs avaient
+     fini par diverger dans les composants. */
+  --accent-soft: color-mix(in srgb, var(--accent) 17%, var(--surface));
+  --good-soft: color-mix(in srgb, var(--good) 14%, var(--surface));
+  --warning-soft: color-mix(in srgb, var(--warning) 20%, var(--surface));
+  --critical-soft: color-mix(in srgb, var(--critical) 14%, var(--surface));
+
   /* Traits */
   --hairline: #e8e8e4;
   --border: #d5d8dd;
+  --border-hover: #b9bec7;
 
   /* Rayons */
   --radius-sm: 6px;
@@ -63,7 +83,63 @@
   /* Anneau de focus — un seul, partout */
   --focus-ring: 0 0 0 3px rgba(26, 86, 219, 0.35);
 
-  color-scheme: light;
+  color-scheme: light dark;
+}
+
+/* --- Thème sombre --------------------------------------------------------- */
+/* Seuls les tokens changent : aucune règle de mise en page n'est dupliquée, et
+   les teintes douces se recalculent d'elles-mêmes puisqu'elles sont dérivées de
+   la surface. Automatique via `prefers-color-scheme`, sans bascule dans
+   l'interface — il n'existe pas d'écran de préférences où la loger, et le
+   réglage système est de toute façon la réponse que l'utilisateur a déjà donnée.
+
+   Deux inversions méritent d'être signalées, le reste n'est qu'un
+   assombrissement :
+
+   - La page est plus sombre que les cartes, là où en clair elle est plus grise
+     que le blanc des cartes. Dans les deux cas la carte reste la surface qui
+     avance ; l'ombre portée, elle, ne sépare plus rien sur fond noir, c'est ce
+     contraste de surfaces qui reprend son rôle.
+   - `--text-on-accent` passe au bleu nuit. L'accent doit être éclairci pour se
+     détacher du fond, et du blanc sur ce bleu-là tombe à 3,2:1 — sous le seuil.
+     Une même couleur ne peut pas être à la fois assez claire pour ressortir sur
+     du noir et assez sombre pour porter du texte blanc. */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #17181c;
+    --surface-sunken: #0e0f12;
+    --surface-muted: #1f2127;
+
+    --text-primary: #e9e9ec;
+    --text-secondary: #b2b3b9;
+    --text-muted: #8f9098;
+    --text-on-accent: #0a1020;
+
+    --accent: #6f9bf2;
+    --accent-strong: #8fb3f7;
+    --accent-ink: #c3d6fc;
+    --accent-on-soft: #8094b8;
+
+    --good: #46bd52;
+    --good-strong: #46bd52;
+    --warning: #e2a72e;
+    --critical: #e8706b;
+    --error-ink: #f6aba7;
+    --error-surface: #3b1e1e;
+    --warning-ink: #e6c483;
+
+    --hairline: #2b2d33;
+    --border: #3b3e46;
+    --border-hover: #50545e;
+
+    --shadow-card:
+      0 1px 2px rgba(0, 0, 0, 0.5),
+      0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-raised: 0 6px 16px rgba(0, 0, 0, 0.55);
+
+    --focus-ring: 0 0 0 3px rgba(111, 155, 242, 0.45);
+  }
 }
 
 * {
@@ -189,7 +265,7 @@ textarea {
 
 input:hover:not(:disabled),
 select:hover:not(:disabled) {
-  border-color: #b9bec7;
+  border-color: var(--border-hover);
 }
 
 input:disabled,
@@ -248,7 +324,7 @@ input[type='file'] {
 .btn--primary:disabled {
   background: var(--accent-soft);
   border-color: var(--accent-soft);
-  color: #7d95c9;
+  color: var(--accent-on-soft);
 }
 
 .btn--quiet {
@@ -259,7 +335,7 @@ input[type='file'] {
 
 .btn--quiet:hover:not(:disabled) {
   background: var(--surface-muted);
-  border-color: #b9bec7;
+  border-color: var(--border-hover);
 }
 
 .btn--quiet:disabled {
@@ -398,6 +474,59 @@ code {
 }
 :is(.stack-segment, .swatch).tone-accent {
   background: var(--accent);
+}
+
+/* --- Pastilles de statut -------------------------------------------------- */
+/* Un statut n'est jamais porté par la couleur seule : la pastille associe
+   toujours une icône et un libellé. `tone-active` et `tone-accent` désignent le
+   même bleu — le premier vient des statuts de la file d'import, le second d'un
+   état du worker ; les deux noms restent parce qu'ils disent des choses
+   différentes à l'endroit où ils sont écrits. */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.chip-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+  color: var(--text-muted);
+}
+
+.chip.tone-good {
+  background: var(--good-soft);
+}
+.chip.tone-good .chip-icon {
+  color: var(--good);
+}
+
+.chip.tone-warning {
+  background: var(--warning-soft);
+}
+.chip.tone-warning .chip-icon {
+  color: var(--warning-ink);
+}
+
+.chip.tone-critical {
+  background: var(--critical-soft);
+}
+.chip.tone-critical .chip-icon {
+  color: var(--critical);
+}
+
+.chip:is(.tone-accent, .tone-active) {
+  background: var(--accent-soft);
+}
+.chip:is(.tone-accent, .tone-active) .chip-icon {
+  color: var(--accent);
 }
 
 /* --- Compteurs ------------------------------------------------------------ */
