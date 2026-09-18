@@ -10,57 +10,76 @@
  * s'applique qu'aux styles écrits *dans* un composant, donc un socle global
  * traverse tous les écrans — c'est exactement ce qu'on veut d'un design system.
  * Le CSS d'un composant ne garde que ce qui lui est propre.
+ *
+ * Charte graphique reprise de rcr-tolona.com : accent turquoise, surfaces bleu
+ * nuit, Manrope pour les titres et Inter pour le texte. Le site n'existe qu'en
+ * thème sombre — ses valeurs sont donc reprises telles quelles dans le bloc
+ * sombre, et le thème clair transpose la même identité (voir plus bas).
+ *
+ * Les polices sont auto-hébergées plutôt que tirées de Google Fonts comme le
+ * fait le site. Deux raisons, et la seconde est la vraie : l'image Docker
+ * embarque déjà ses modèles pour tourner en réseau fermé, où un CDN ferait
+ * silencieusement retomber l'interface sur les polices système ; et c'est un
+ * système de reconnaissance faciale, dont chaque requête vers un tiers est une
+ * adresse IP d'utilisateur transmise sans nécessité.
  */
 
-:root {
-  /* Surfaces */
-  --surface: #ffffff;
-  --surface-sunken: #f4f5f7;
-  --surface-muted: #f7f8fa;
+@import '@fontsource-variable/inter/wght.css';
+@import '@fontsource-variable/manrope/wght.css';
 
-  /* Encres — un seul gris par rôle */
-  --text-primary: #1c1c1e;
-  --text-secondary: #52514e;
-  /* 4,97:1 sur la carte, 4,56:1 sur la page — au-dessus du seuil AA. La
-     valeur précédente (#86858a) plafonnait à 3,66:1, donc sous le seuil,
-     alors qu'elle porte les intitulés de compteurs et de colonnes. */
-  --text-muted: #706f76;
+:root {
+  /* Titres en Manrope, texte en Inter — la répartition du site RCR. */
+  --font-display: 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Surfaces — le blanc des cartes sur un fond très légèrement turquoise,
+     pour que le clair appartienne à la même famille que le sombre. */
+  --surface: #ffffff;
+  --surface-sunken: #eef2f4;
+  --surface-muted: #f6f9fa;
+
+  /* Encres — un seul gris par rôle. Le noir principal est le `surface` de la
+     charte RCR (#0d1321) : la couleur qui porte le thème sombre sert d'encre
+     au thème clair, ce qui relie les deux par une valeur de marque. */
+  --text-primary: #0d1321;
+  --text-secondary: #46525f;
+  --text-muted: #646f7c;
   --text-on-accent: #ffffff;
 
-  /* Accent de marque */
-  --accent: #1a56db;
-  --accent-strong: #1544ad;
-  --accent-ink: #10357f;
-  /* Encre d'un bouton primaire désactivé, posée sur --accent-soft. */
-  --accent-on-soft: #7d95c9;
+  /* Accent de marque — le turquoise RCR #198A92, assombri juste assez pour
+     porter du texte blanc (4,12:1 à l'original, sous le seuil ; 4,75:1 ici).
+     La teinte ne bouge pas, seule la luminosité. */
+  --accent: #177f86;
+  --accent-strong: #11666b;
+  --accent-ink: #0b4f54;
+  --accent-on-soft: #8fb2b5;
 
-  /* Statuts : marques de données (palette validée) puis encres d'alerte */
-  --good: #0ca30c;
-  /* `--good` est une marque de données : validée à 3:1, seuil des repères
-     graphiques, et elle le tient. Un fond de texte en demande 4,5 — blanc
-     dessus ne donne que 3,35:1. D'où ce vert plus sombre, réservé aux
-     pastilles pleines ; la palette de données, elle, ne bouge pas. */
-  --good-strong: #098309;
-  --warning: #fab219;
-  --critical: #d03b3b;
-  --error-ink: #b91c1c;
-  --error-surface: #fee2e2;
-  --warning-ink: #8a5a00;
+  /* Statuts. Le rouge d'alerte reprend la paire de la charte à l'envers :
+     #93000a (error-container) devient l'encre, #ffdad6 (on-error-container)
+     la surface. L'orangé vient de la tertiaire RCR, assombri pour le clair.
+     Le vert est le seul ajout : la charte n'en comporte aucun. */
+  --good: #1a8257;
+  --good-strong: #17784f;
+  --warning: #b4661f;
+  --critical: #a3291f;
+  --error-ink: #93000a;
+  --error-surface: #ffdad6;
+  --warning-ink: #713713;
+  /* Neutre porteur d'encre — même rôle que --good-strong : une surface, pas
+     une encre. `--text-muted` avait servi de fond de pastille, ce qui retombe
+     sous le seuil dès que l'encre s'inverse en thème sombre. */
+  --neutral-strong: #5c6672;
 
-  /* Teintes douces — fonds de pastilles, pistes de jauge, bandeaux d'info.
-     Dérivées de la couleur de statut et de la surface plutôt que figées : une
-     valeur en dur serait à recalculer pour chaque thème, et c'est très
-     exactement ainsi que quatre `rgba()` recopiant ces mêmes couleurs avaient
-     fini par diverger dans les composants. */
+  /* Teintes douces — dérivées de la couleur de statut et de la surface. */
   --accent-soft: color-mix(in srgb, var(--accent) 17%, var(--surface));
   --good-soft: color-mix(in srgb, var(--good) 14%, var(--surface));
   --warning-soft: color-mix(in srgb, var(--warning) 20%, var(--surface));
   --critical-soft: color-mix(in srgb, var(--critical) 14%, var(--surface));
 
   /* Traits */
-  --hairline: #e8e8e4;
-  --border: #d5d8dd;
-  --border-hover: #b9bec7;
+  --hairline: #e2e8ea;
+  --border: #cbd5d8;
+  --border-hover: #a9b8bc;
 
   /* Rayons */
   --radius-sm: 6px;
@@ -81,64 +100,65 @@
   --space-6: 2rem;
 
   /* Anneau de focus — un seul, partout */
-  --focus-ring: 0 0 0 3px rgba(26, 86, 219, 0.35);
+  --focus-ring: 0 0 0 3px rgba(23, 127, 134, 0.38);
 
   color-scheme: light dark;
 }
 
 /* --- Thème sombre --------------------------------------------------------- */
-/* Seuls les tokens changent : aucune règle de mise en page n'est dupliquée, et
-   les teintes douces se recalculent d'elles-mêmes puisqu'elles sont dérivées de
-   la surface. Automatique via `prefers-color-scheme`, sans bascule dans
-   l'interface — il n'existe pas d'écran de préférences où la loger, et le
-   réglage système est de toute façon la réponse que l'utilisateur a déjà donnée.
+/* C'est ici que la charte RCR est reprise littéralement : le site n'existe
+   qu'en sombre, ses tokens Material 3 sont donc transposés tels quels, nom pour
+   nom. La page est son `surface` (#0d1321), les cartes son `surface-container`,
+   le texte son `on-surface`, les traits ses `outline`. Seul le vert est ajouté
+   — la charte n'en a pas.
 
-   Deux inversions méritent d'être signalées, le reste n'est qu'un
-   assombrissement :
+   L'accent est le cyan #3ab7e8 et non le turquoise #198A92 du token `primary` :
+   le site surcharge `.text-primary` et `.bg-primary-container` vers ce cyan en
+   `!important`, et c'est sa classe de couleur la plus employée. Le turquoise
+   reste l'accent du thème clair, où il se détache du blanc ; sur le bleu nuit
+   il tombe à 3,99:1 et ne suffit plus.
 
-   - La page est plus sombre que les cartes, là où en clair elle est plus grise
-     que le blanc des cartes. Dans les deux cas la carte reste la surface qui
-     avance ; l'ombre portée, elle, ne sépare plus rien sur fond noir, c'est ce
-     contraste de surfaces qui reprend son rôle.
-   - `--text-on-accent` passe au bleu nuit. L'accent doit être éclairci pour se
-     détacher du fond, et du blanc sur ce bleu-là tombe à 3,2:1 — sous le seuil.
-     Une même couleur ne peut pas être à la fois assez claire pour ressortir sur
-     du noir et assez sombre pour porter du texte blanc. */
+   `--text-on-accent` est le `on-primary` de la charte (#003737) : la même
+   inversion encre-foncée-sur-accent-clair que le thème avait dû déduire seul
+   avant qu'on connaisse la charte, ce qui la confirme plutôt que la contredit. */
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --surface: #17181c;
-    --surface-sunken: #0e0f12;
-    --surface-muted: #1f2127;
+    --surface: #191f2e;
+    --surface-sunken: #0d1321;
+    --surface-muted: #242a39;
 
-    --text-primary: #e9e9ec;
-    --text-secondary: #b2b3b9;
-    --text-muted: #8f9098;
-    --text-on-accent: #0a1020;
+    --text-primary: #dde2f6;
+    --text-secondary: #bdc9c8;
+    --text-muted: #879392;
+    --text-on-accent: #003737;
 
-    --accent: #6f9bf2;
-    --accent-strong: #8fb3f7;
-    --accent-ink: #c3d6fc;
-    --accent-on-soft: #8094b8;
+    --accent: #3ab7e8;
+    --accent-strong: #6ecdf0;
+    --accent-ink: #a9e0f7;
+    --accent-on-soft: #4e7d92;
 
-    --good: #46bd52;
-    --good-strong: #46bd52;
-    --warning: #e2a72e;
-    --critical: #e8706b;
-    --error-ink: #f6aba7;
-    --error-surface: #3b1e1e;
-    --warning-ink: #e6c483;
+    --good: #3ec98f;
+    --good-strong: #3ec98f;
+    --warning: #ffb690;
+    --critical: #ffb4ab;
+    --error-ink: #ffdad6;
+    --error-surface: #93000a;
+    --warning-ink: #ffb690;
+    /* Éclairci par rapport à l'`outline` RCR (#879392) : sous l'encre foncée
+       des pastilles pleines, l'original donne 4,13:1, sous le seuil. */
+    --neutral-strong: #94a09f;
 
-    --hairline: #2b2d33;
-    --border: #3b3e46;
-    --border-hover: #50545e;
+    --hairline: #2f3544;
+    --border: #3e4949;
+    --border-hover: #879392;
 
     --shadow-card:
       0 1px 2px rgba(0, 0, 0, 0.5),
       0 1px 3px rgba(0, 0, 0, 0.4);
     --shadow-raised: 0 6px 16px rgba(0, 0, 0, 0.55);
 
-    --focus-ring: 0 0 0 3px rgba(111, 155, 242, 0.45);
+    --focus-ring: 0 0 0 3px rgba(58, 183, 232, 0.45);
   }
 }
 
@@ -146,14 +166,20 @@
   box-sizing: border-box;
 }
 
+/* Manrope ne sert qu'aux titres, comme sur le site : deux familles nettement
+   distinctes valent mieux qu'une seule étirée sur tous les rôles. */
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
 body {
   margin: 0;
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
+  font-family: var(--font-body);
   background: var(--surface-sunken);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;

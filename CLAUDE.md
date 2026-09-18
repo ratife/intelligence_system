@@ -267,6 +267,36 @@ colors, no re-declared page shell, card or button. Before adding a rule, check
 whether the token or primitive already exists; before hardcoding a color, add or
 reuse a token.
 
+**The palette and type come from the RCR brand (rcr-tolona.com).** That site is
+a Material 3 token set that exists **in dark only**, so the two themes are not
+symmetrical in origin: the dark block transposes its tokens literally (page =
+its `surface` `#0d1321`, cards = `surface-container`, ink = `on-surface`,
+strokes = `outline`/`outline-variant`, error pair = `error-container` +
+`on-error-container`), while the light theme carries the same identity into
+light surfaces. Two things worth knowing before touching it:
+
+- **The accent differs per theme, and that is faithful, not sloppy.** The brand
+  token says `primary: #198A92` (teal), but the site overrides `.text-primary`
+  and `.bg-primary-container` to `#3ab7e8` with `!important` — and that is its
+  most-used colour class. So light uses the teal (darkened to `#177f86`, which
+  keeps the hue and lifts white-on-accent from 4.12:1 to 4.75:1), and dark uses
+  the cyan, because the teal only reaches 3.99:1 on `#191f2e`.
+- **Green is the one invention.** The brand has no green at all; `--good` is
+  ours, chosen inside the teal family and measured like the rest.
+
+`--text-on-accent` being dark in dark mode was deduced from contrast before the
+brand was known; the brand's own `on-primary` is `#003737`, which confirms it.
+
+**Fonts are self-hosted, not pulled from Google as the brand site does.**
+`@fontsource-variable/manrope` (headings) and `@fontsource-variable/inter`
+(body) are imported from `styles.css`, which splits by `unicode-range` — 13
+woff2 files ship in the image (316 KB) but a browser fetches only the two latin
+subsets (71 KB). The reason is not weight: this image already embeds its ML
+models to run on a closed network, where a CDN would silently drop the UI back
+to system fonts, and a facial-recognition system has no business handing a
+third party a user's IP on every page load. Don't reintroduce a `<link>` to
+fonts.googleapis.com.
+
 **The guard covers `styles.css` too, and it is not only about hex.** The earlier
 rule (hex under `web/src/app/*/*.css`) left two blind spots that both filled up:
 `styles.css` itself was never scanned, and `rgba()` was never matched — so three
@@ -297,9 +327,9 @@ preserve when touching the palette:
   exception: they are `color-mix()` of a status colour into `var(--surface)`, so
   they re-derive per theme on their own. Prefer that over a second literal.
 - **`--text-on-accent` is dark in the dark theme**, and that inversion is load
-  bearing. The accent has to be lightened to stand off a near-black page, and
-  white on that lighter blue falls to 3.2:1 — under AA. One colour cannot be
-  both light enough to read on black and dark enough to carry white text.
+  bearing. The accent has to be light enough to stand off a near-black page, and
+  white on such an accent falls under AA. One colour cannot be both light enough
+  to read on black and dark enough to carry white text.
 
 Two contrast failures were found by measuring the palette rather than looking at
 it, and both predate any theme work. `--text-muted` gave 3.66:1 on a card —
@@ -308,7 +338,15 @@ below the 4.5 AA floor — while carrying the counter and column labels; it is n
 3.35:1: a *data mark* colour, validated at the 3:1 the chart marks need and
 meeting it, reused as a *text background*, which demands 4.5. Hence
 `--good-strong`, for filled chips only — the data palette itself does not move.
+`--neutral-strong` exists for the same reason, found the same way: the toneless
+`.status-chip` (status « Ignorée ») used `--text-muted` as its fill, which held
+at 4.97:1 under white ink but dropped to 4.13:1 once the dark theme inverted
+that ink. Three times now the same category error — a colour meant to be *read*
+pressed into service as something to read *on*. When a token becomes a
+background behind text, it needs its own `-strong` value, measured.
+
 Keep new ink/surface pairs above that floor, and measure rather than eyeball.
+The current palette clears it on all 28 pairs, both themes.
 
 **The whole UI sits behind a login gate.** `app.html` renders `<app-login>`
 (`login/`) until `AuthCredentialsService.unlocked()` is true; only then do the
