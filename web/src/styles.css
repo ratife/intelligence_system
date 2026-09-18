@@ -102,7 +102,7 @@
   /* Anneau de focus — un seul, partout */
   --focus-ring: 0 0 0 3px rgba(23, 127, 134, 0.38);
 
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
 /* --- Thème sombre --------------------------------------------------------- */
@@ -120,46 +120,53 @@
 
    `--text-on-accent` est le `on-primary` de la charte (#003737) : la même
    inversion encre-foncée-sur-accent-clair que le thème avait dû déduire seul
-   avant qu'on connaisse la charte, ce qui la confirme plutôt que la contredit. */
+   avant qu'on connaisse la charte, ce qui la confirme plutôt que la contredit.
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface: #191f2e;
-    --surface-sunken: #0d1321;
-    --surface-muted: #242a39;
+   Déclenché par un attribut et non par `prefers-color-scheme`, depuis qu'un
+   bouton permet de forcer un thème. Une media query aurait imposé d'écrire ces
+   vingt-trois tokens deux fois — une fois pour le réglage système, une fois
+   pour le choix explicite — et deux copies d'une palette finissent toujours
+   par diverger. L'attribut est posé par `ThemeService`, qui résout lui-même le
+   réglage système et le suit tant que l'utilisateur n'a rien imposé. */
 
-    --text-primary: #dde2f6;
-    --text-secondary: #bdc9c8;
-    --text-muted: #879392;
-    --text-on-accent: #003737;
+:root[data-theme='dark'] {
+  color-scheme: dark;
 
-    --accent: #3ab7e8;
-    --accent-strong: #6ecdf0;
-    --accent-ink: #a9e0f7;
-    --accent-on-soft: #4e7d92;
+  --surface: #191f2e;
+  --surface-sunken: #0d1321;
+  --surface-muted: #242a39;
 
-    --good: #3ec98f;
-    --good-strong: #3ec98f;
-    --warning: #ffb690;
-    --critical: #ffb4ab;
-    --error-ink: #ffdad6;
-    --error-surface: #93000a;
-    --warning-ink: #ffb690;
-    /* Éclairci par rapport à l'`outline` RCR (#879392) : sous l'encre foncée
-       des pastilles pleines, l'original donne 4,13:1, sous le seuil. */
-    --neutral-strong: #94a09f;
+  --text-primary: #dde2f6;
+  --text-secondary: #bdc9c8;
+  --text-muted: #879392;
+  --text-on-accent: #003737;
 
-    --hairline: #2f3544;
-    --border: #3e4949;
-    --border-hover: #879392;
+  --accent: #3ab7e8;
+  --accent-strong: #6ecdf0;
+  --accent-ink: #a9e0f7;
+  --accent-on-soft: #4e7d92;
 
-    --shadow-card:
-      0 1px 2px rgba(0, 0, 0, 0.5),
-      0 1px 3px rgba(0, 0, 0, 0.4);
-    --shadow-raised: 0 6px 16px rgba(0, 0, 0, 0.55);
+  --good: #3ec98f;
+  --good-strong: #3ec98f;
+  --warning: #ffb690;
+  --critical: #ffb4ab;
+  --error-ink: #ffdad6;
+  --error-surface: #93000a;
+  --warning-ink: #ffb690;
+  /* Éclairci par rapport à l'`outline` RCR (#879392) : sous l'encre foncée
+     des pastilles pleines, l'original donne 4,13:1, sous le seuil. */
+  --neutral-strong: #94a09f;
 
-    --focus-ring: 0 0 0 3px rgba(58, 183, 232, 0.45);
-  }
+  --hairline: #2f3544;
+  --border: #3e4949;
+  --border-hover: #879392;
+
+  --shadow-card:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-raised: 0 6px 16px rgba(0, 0, 0, 0.55);
+
+  --focus-ring: 0 0 0 3px rgba(58, 183, 232, 0.45);
 }
 
 * {

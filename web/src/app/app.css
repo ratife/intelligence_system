@@ -132,10 +132,10 @@
   flex: none;
 }
 
-/* Se déconnecter n'est pas une destination : même gabarit que les entrées du
-   menu pour l'alignement du rail, mais une encre discrète pour ne pas se lire
-   comme une cinquième page. */
-.logout {
+/* Ni le thème ni la déconnexion ne sont des destinations : même gabarit que les
+   entrées du menu, pour que le rail reste aligné, mais une encre discrète afin
+   de ne pas les lire comme deux pages de plus. */
+.quiet {
   color: var(--text-muted);
   font-weight: 500;
 }

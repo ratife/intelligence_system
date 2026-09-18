@@ -314,13 +314,30 @@ must stay empty. `face-frame.css` is the one exemption, and a deliberate one:
 its face boxes carry black halos so the outline reads on *any* photograph — a
 guaranteed contrast, not a palette colour.
 
-**Both themes come from the same tokens.** `styles.css` declares
-`color-scheme: light dark` and a `@media (prefers-color-scheme: dark)` block that
-redefines the colour tokens and nothing else — no layout rule is duplicated, and
-every screen follows for free (the whole second theme costs 40 bytes in the
-built stylesheet). There is no in-app toggle: no preferences screen exists to
-hold one, and the OS setting is the answer the user already gave. Two things to
-preserve when touching the palette:
+**Both themes come from the same tokens.** `styles.css` holds one
+`:root[data-theme='dark']` block that redefines the colour tokens and nothing
+else — no layout rule is duplicated, and every screen follows for free.
+
+**The theme is attribute-driven, not `prefers-color-scheme`**, since the sidebar
+gained a toggle. A media query would have forced the twenty-three tokens to be
+written twice, once for the OS setting and once for an explicit choice, and two
+copies of a palette always drift. `ThemeService`
+(`services/theme.service.ts`) resolves the OS setting itself and writes the
+attribute. Three points that are load bearing:
+
+- **Three states, not two: `system` / `light` / `dark`.** `system` is not a
+  third palette but the absence of a choice, so it keeps *following* the OS
+  live via a `matchMedia` listener — an OS that flips at sunset must still flip
+  the app. Dropping it would be a regression, not a simplification.
+- **An inline script in `index.html` sets the attribute before first paint.**
+  Left to `ThemeService` alone, the Angular bundle's load time would show a
+  light screen before switching. That script and the service must agree on the
+  `facereco.theme` key and on the same resolution rule.
+- The choice lives in **`localStorage`**, unlike the credentials' deliberate
+  `sessionStorage`: a display preference has no reason to expire when the
+  browser closes, and it is not sensitive.
+
+Two things to preserve when touching the palette:
 
 - **Every colour token must exist in both blocks.** The four soft tints
   (`--accent-soft`, `--good-soft`, `--warning-soft`, `--critical-soft`) are the
