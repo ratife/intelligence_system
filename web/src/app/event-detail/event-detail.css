@@ -65,7 +65,7 @@
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-on-accent);
-  background: var(--text-muted);
+  background: var(--neutral-strong);
 }
 
 .status-chip.tone-good {

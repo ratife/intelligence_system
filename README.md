@@ -73,13 +73,31 @@ InsightFace embarqués dans l'image pour qu'un conteneur neuf réponde sans
 télécharger 280 Mo au premier appel). L'API met ensuite ~1 à 2 minutes à charger
 les modèles ONNX avant de répondre.
 
-`S3_PUBLIC_ENDPOINT_URL` mérite une mention : l'API renvoie au navigateur des
-URLs S3 signées, et SigV4 signe l'en-tête `Host`. L'hôte qui apparaît dans
-l'URL doit donc être celui que le **navigateur** sait joindre, pas celui que
-l'API utilise en interne (`http://minio:9000`). La valeur par défaut
-(`http://localhost:9000`) convient quand le navigateur tourne sur la machine
-Docker ; sur un serveur, la remplacer par son nom public, sinon les photos ne
-s'affichent pas.
+### `S3_PUBLIC_ENDPOINT_URL` : la variable à ne pas oublier
+
+L'API renvoie au navigateur des URLs d'images **signées**, et SigV4 couvre
+l'en-tête `Host`. L'hôte inscrit dans l'URL doit donc être celui que le
+**navigateur** sait joindre, pas celui que l'API utilise en interne
+(`http://minio:9000`). C'est aussi pourquoi le front ne peut pas composer ces
+URLs lui-même : les réécrire après signature les invaliderait.
+
+```bash
+# .env, en local — le navigateur tourne sur la machine Docker
+S3_PUBLIC_ENDPOINT_URL=http://localhost:9000
+
+# .env, sur un serveur — son adresse publique, port 9000 ouvert
+S3_PUBLIC_ENDPOINT_URL=http://mon-serveur.example.com:9000
+```
+
+Laissée vide, elle retombe sur `S3_ENDPOINT_URL`. Une mauvaise valeur ne
+provoque aucune erreur côté API : les photos sont simplement absentes dans le
+navigateur. L'API annonce donc au démarrage l'adresse pour laquelle elle signe,
+ce qui rend la faute lisible avant d'avoir à la chercher :
+
+```
+URLs d'images signées pour http://localhost:9000 — cette adresse doit être
+joignable depuis le navigateur, pas seulement depuis l'API (...).
+```
 
 Arrêt : `docker compose --profile app down`. **Le profil est nécessaire même
 pour arrêter** — sans lui, `down` ignore les services de profil et laisse l'API,
