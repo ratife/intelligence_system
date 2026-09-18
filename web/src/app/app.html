@@ -30,7 +30,19 @@
         </span>
         <button
           type="button"
-          class="tab logout"
+          class="tab quiet"
+          [title]="themeLabel() + ' — cliquer pour changer'"
+          (click)="theme.next()"
+        >
+          <svg class="tab-icon" viewBox="0 0 20 20" aria-hidden="true">
+            <path [attr.d]="themeIcon()" />
+          </svg>
+          <span class="tab-label">{{ themeLabel() }}</span>
+        </button>
+
+        <button
+          type="button"
+          class="tab quiet"
           title="Se déconnecter"
           (click)="logout()"
         >

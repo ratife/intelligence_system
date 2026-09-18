@@ -6,6 +6,19 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <script>
+    /* Thème posé avant le premier rendu. Laissé au seul ThemeService, le temps
+       de chargement du bundle Angular afficherait un écran clair avant bascule.
+       Le stockage peut lever (navigation privée) : le réglage système reste
+       alors consulté, on ne retombe pas en clair par accident. */
+    (function () {
+      var choice = null;
+      try { choice = localStorage.getItem('facereco.theme'); } catch (e) { /* ignoré */ }
+      var dark = choice === 'dark'
+        || (choice !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>
