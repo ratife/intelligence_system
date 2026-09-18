@@ -1,70 +1,124 @@
-/* Barre de navigation. Boutons et tokens viennent du socle partagé
-   (`src/styles.css`). */
+/* Coquille à menu latéral. Boutons, couleurs et espacements viennent du socle
+   partagé (`src/styles.css`) ; on ne garde ici que la mise en page. */
 
-.app-nav {
-  background: var(--surface);
-  border-bottom: 1px solid var(--hairline);
-  position: sticky;
-  top: 0;
-  z-index: 10;
+.shell {
+  display: flex;
+  min-height: 100dvh;
 }
 
-/* Contenu aligné sur la largeur des pages, pas sur celle de l'écran. */
-.app-nav-inner {
+/* --- Menu latéral --------------------------------------------------------- */
+
+.sidebar {
+  flex: none;
+  width: 232px;
   display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 0 var(--space-5);
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-3);
+  background: var(--surface);
+  border-right: 1px solid var(--hairline);
+
+  /* Collé en haut sur toute la hauteur de la fenêtre : le contenu défile,
+     le menu reste. `overflow-y` lui est propre, pour que quatre entrées de
+     plus ne poussent jamais le bloc de session hors de l'écran. */
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow-y: auto;
+}
+
+.brand {
+  margin: 0;
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .tab {
-  padding: var(--space-4) var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
   border: none;
-  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-md);
   background: transparent;
   font: inherit;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 600;
   color: var(--text-secondary);
+  text-align: left;
   cursor: pointer;
-  white-space: nowrap;
   transition:
     color 120ms ease,
-    border-color 120ms ease;
+    background-color 120ms ease;
 }
 
 .tab:hover:not(.active) {
+  background: var(--surface-muted);
   color: var(--text-primary);
 }
 
+/* L'état actif se lit à la pastille pleine, pas au seul texte coloré : à la
+   verticale, un simple trait d'accent se confondrait avec la bordure du menu. */
 .tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
 }
 
-/* Le focus ne doit pas être rogné par le débordement de la barre. */
-.tab:focus-visible {
-  border-radius: var(--radius-sm);
+.tab-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* --- Session -------------------------------------------------------------- */
 
 .session {
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--hairline);
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-left: auto;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .actor {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   font-size: 0.85rem;
   color: var(--text-secondary);
-  max-width: 16ch;
+  min-width: 0;
+}
+
+.actor-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -78,20 +132,58 @@
   flex: none;
 }
 
-@media (max-width: 640px) {
-  .app-nav-inner {
-    flex-wrap: wrap;
-    padding: 0 var(--space-4);
-    gap: 0 var(--space-1);
+/* Se déconnecter n'est pas une destination : même gabarit que les entrées du
+   menu pour l'alignement du rail, mais une encre discrète pour ne pas se lire
+   comme une cinquième page. */
+.logout {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* --- Contenu -------------------------------------------------------------- */
+
+/* `min-width: 0` sans quoi un tableau large ou un nom de fichier interminable
+   élargirait la colonne au lieu de défiler, et pousserait le menu hors champ. */
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* --- Rail réduit ---------------------------------------------------------- */
+/* Sous 900px le menu reste à gauche mais se réduit aux icônes : une colonne de
+   232px ne laisse plus assez de place au contenu. Les libellés ne sont pas
+   supprimés, seulement retirés à la vue — un lecteur d'écran les lit encore, et
+   l'attribut `title` les rend au survol. */
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 64px;
+    padding: var(--space-4) var(--space-2);
+  }
+
+  .brand {
+    display: none;
   }
 
   .tab {
-    padding: var(--space-3) var(--space-2);
-    font-size: 0.88rem;
+    justify-content: center;
+    padding: var(--space-3) 0;
   }
 
-  .session {
-    width: 100%;
-    padding-bottom: var(--space-2);
+  .actor {
+    justify-content: center;
+    padding: var(--space-2) 0;
+  }
+
+  .tab-label,
+  .actor-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
