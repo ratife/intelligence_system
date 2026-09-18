@@ -1,45 +1,65 @@
 @if (credentials.unlocked()) {
-  <nav class="app-nav">
-    <div class="app-nav-inner">
-      <button class="tab" [class.active]="page() === 'dashboard'" (click)="selectPage('dashboard')">
-        Tableau de bord
-      </button>
-      <button class="tab" [class.active]="page() === 'events'" (click)="selectPage('events')">
-        Événements
-      </button>
-      <button class="tab" [class.active]="page() === 'search'" (click)="selectPage('search')">
-        Recherche
-      </button>
-      <button class="tab" [class.active]="page() === 'import'" (click)="selectPage('import')">
-        Importer un événement
-      </button>
+  <div class="shell">
+    <nav class="sidebar" aria-label="Navigation principale">
+      <p class="brand">Recherche faciale</p>
+
+      <ul class="nav-list">
+        @for (item of pages; track item.id) {
+          <li>
+            <button
+              type="button"
+              class="tab"
+              [class.active]="page() === item.id"
+              [attr.aria-current]="page() === item.id ? 'page' : null"
+              [title]="item.label"
+              (click)="selectPage(item.id)"
+            >
+              <svg class="tab-icon" viewBox="0 0 20 20" aria-hidden="true">
+                <path [attr.d]="item.icon" />
+              </svg>
+              <span class="tab-label">{{ item.label }}</span>
+            </button>
+          </li>
+        }
+      </ul>
 
       <div class="session">
-        <span class="actor" title="Identifiant connecté">
+        <span class="actor" [title]="'Connecté en tant que ' + credentials.actorId">
           <span class="actor-dot" aria-hidden="true"></span>
-          {{ credentials.actorId }}
+          <span class="actor-name">{{ credentials.actorId }}</span>
         </span>
-        <button type="button" class="btn btn--quiet btn--sm" (click)="logout()">
-          Se déconnecter
+        <button
+          type="button"
+          class="tab logout"
+          title="Se déconnecter"
+          (click)="logout()"
+        >
+          <svg class="tab-icon" viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M12.5 6V4.5a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V14" />
+            <path d="M8.5 10h8m0 0-2.5-2.5M16.5 10 14 12.5" />
+          </svg>
+          <span class="tab-label">Se déconnecter</span>
         </button>
       </div>
-    </div>
-  </nav>
+    </nav>
 
-  @switch (page()) {
-    @case ('dashboard') {
-      <app-dashboard></app-dashboard>
-    }
-    @case ('events') {
-      <app-events></app-events>
-    }
-    @case ('search') {
-      <app-search></app-search>
-    }
-    @case ('import') {
-      <app-event-import></app-event-import>
-    }
-  }
+    <main class="content">
+      @switch (page()) {
+        @case ('dashboard') {
+          <app-dashboard></app-dashboard>
+        }
+        @case ('events') {
+          <app-events></app-events>
+        }
+        @case ('search') {
+          <app-search></app-search>
+        }
+        @case ('import') {
+          <app-event-import></app-event-import>
+        }
+      }
+    </main>
+  </div>
 } @else {
   <app-login></app-login>
 }
