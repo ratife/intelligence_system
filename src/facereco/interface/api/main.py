@@ -7,6 +7,7 @@ par la couche de dépendances (voir `deps.py`).
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -29,9 +30,16 @@ from facereco.interface.api.routers.search import router as search_router
 from facereco.interface.api.routers.statistics import router as statistics_router
 from facereco.interface.api.routers.workers import router as workers_router
 
+logger = logging.getLogger("facereco.api")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    # uvicorn ne pose pas de handler sur le logger racine : sans cet appel, les
+    # messages ci-dessous n'apparaîtraient nulle part. `basicConfig` est sans
+    # effet si une configuration existe déjà, il n'écrase donc rien.
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+
     app.state.face_detector = InsightFaceDetector(
         model_pack=settings.insightface_model_pack, providers=settings.onnx_providers
     )
@@ -46,6 +54,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         secret_key=settings.s3_secret_key,
         region=settings.s3_region,
         public_endpoint_url=settings.s3_public_endpoint_url,
+    )
+    # L'hôte fait partie de la signature : une mauvaise valeur ne se manifeste
+    # que par des images absentes dans le navigateur, sans erreur côté API.
+    # L'annoncer au démarrage rend la faute lisible dans les logs.
+    signing_endpoint = settings.s3_public_endpoint_url or settings.s3_endpoint_url
+    logger.info(
+        "URLs d'images signées pour %s — cette adresse doit être joignable depuis le "
+        "navigateur, pas seulement depuis l'API (variable S3_PUBLIC_ENDPOINT_URL).",
+        signing_endpoint,
     )
     redis_client = redis.Redis.from_url(settings.redis_url, decode_responses=True)
     app.state.redis_client = redis_client
