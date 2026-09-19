@@ -296,16 +296,31 @@ textarea {
   transition: border-color 120ms ease;
 }
 
+/* `textarea` partageait déjà le bloc de base et l'anneau de focus, mais était
+   absent de ces deux états : il se comportait donc autrement que ses voisins
+   sans qu'aucun écran ne l'expose, faute de zone de texte dans l'interface. */
 input:hover:not(:disabled),
-select:hover:not(:disabled) {
+select:hover:not(:disabled),
+textarea:hover:not(:disabled) {
   border-color: var(--border-hover);
 }
 
 input:disabled,
-select:disabled {
+select:disabled,
+textarea:disabled {
   background: var(--surface-sunken);
   color: var(--text-muted);
   cursor: not-allowed;
+}
+
+/* `resize: both` est le défaut du navigateur : il laisse élargir le champ
+   au-delà de sa colonne flex, ce qui déforme le formulaire. Seule la hauteur
+   reste ajustable, celle que l'on veut vraiment régler sur un texte long. */
+textarea {
+  width: 100%;
+  min-height: 5.5rem;
+  resize: vertical;
+  line-height: 1.5;
 }
 
 input[type='file'] {

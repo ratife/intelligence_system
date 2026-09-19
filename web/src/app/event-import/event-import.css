@@ -63,6 +63,21 @@
   flex: none;
 }
 
+/* Le fieldset du socle est en flex-row : sans cette base, la description se
+   tasserait sur la même ligne que le titre, la date et l'adresse. `flex-basis`
+   à 100 % la renvoie sur sa propre ligne grâce au `flex-wrap` déjà présent —
+   le mécanisme qu'utilise déjà `legend { width: 100% }`. */
+.description-field {
+  flex-basis: 100%;
+}
+
+/* `align-items: flex-end` aligne les champs par le bas ; l'intitulé de la
+   description doit rester collé à sa zone de texte, pas à la ligne du dessus. */
+.description-field .optional {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
 /* --- Sélection de photos -------------------------------------------------- */
 
 /* Les fieldsets du socle sont en ligne ; celui-ci empile sélecteur, liste et

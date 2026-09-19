@@ -45,7 +45,7 @@
             <div class="event-head">
               <h2 class="event-title">
                 <button type="button" class="event-open" (click)="openEvent(summary.id)">
-                  {{ summary.description }}
+                  {{ summary.title }}
                 </button>
               </h2>
               <span class="event-date">{{ formatDate(summary.event_date) }}</span>
@@ -56,7 +56,7 @@
               <div
                 class="meter"
                 role="progressbar"
-                [attr.aria-label]="'Avancement de l\'indexation de ' + summary.description"
+                [attr.aria-label]="'Avancement de l\'indexation de ' + summary.title"
                 [attr.aria-valuenow]="percent(summary.indexing_completion_rate)"
                 aria-valuemin="0"
                 aria-valuemax="100"

@@ -13,13 +13,19 @@ Idempotent par contenu : une image déjà importée (même `content_hash`) est
 ignorée plutôt que dupliquée (même contrainte d'unicité qu'en production).
 
 Un sous-dossier = un événement : si le dossier donné contient des
-sous-dossiers, chacun est importé comme un événement distinct, dont la
-description/date/adresse sont dérivées du *nom du sous-dossier* selon la
-convention "<description> - <AAAA-MM-JJ> - <adresse>" (segments manquants ou
-mal formés → valeurs par défaut, un nom libre reste un import valide). Les
-options --description/--event-date/--address, si fournies, s'appliquent en
-override à tous les sous-dossiers. Sans sous-dossier, le dossier donné est
-importé comme un seul événement (comportement inchangé).
+sous-dossiers, chacun est importé comme un événement distinct, dont le
+titre/date/adresse sont dérivés du *nom du sous-dossier* selon la convention
+"<titre> - <AAAA-MM-JJ> - <adresse>" (segments manquants ou mal formés →
+valeurs par défaut, un nom libre reste un import valide). Le premier segment
+alimente désormais le *titre* et non plus la description : il a toujours été un
+intitulé court, et c'est le rôle que `title` a repris. La convention elle-même
+ne change pas, les arborescences existantes restent valides.
+
+La description, elle, n'est plus dérivée du nom de dossier — un texte libre n'y
+tiendrait pas. Elle se renseigne avec --description, et reste vide par défaut.
+Les options --title/--description/--event-date/--address, si fournies,
+s'appliquent en override à tous les sous-dossiers. Sans sous-dossier, le dossier
+donné est importé comme un seul événement.
 
 Usage :
     python -m facereco.interface.cli.import_folder /chemin/vers/dossier
@@ -57,14 +63,18 @@ DEFAULT_ADDRESS = "Import CLI (dev)"
 
 
 def _parse_event_metadata(name: str) -> tuple[str, date, str]:
-    """Dérive description/date/adresse du nom d'un (sous-)dossier.
+    """Dérive titre/date/adresse du nom d'un (sous-)dossier.
 
-    Convention : "<description> - <AAAA-MM-JJ> - <adresse>". Un segment
-    manquant ou mal formé retombe sur une valeur par défaut plutôt que
-    d'échouer — un nom de dossier libre reste un import valide.
+    Convention : "<titre> - <AAAA-MM-JJ> - <adresse>". Un segment manquant ou
+    mal formé retombe sur une valeur par défaut plutôt que d'échouer — un nom de
+    dossier libre reste un import valide.
+
+    Le premier segment alimente le titre et non la description : c'est le même
+    segment qu'avant, qui a toujours servi d'intitulé. La description ne se
+    dérive pas d'un nom de dossier et reste vide sauf --description.
     """
     parts = [part.strip() for part in name.split(FOLDER_NAME_SEPARATOR)]
-    description = parts[0] or name
+    title = parts[0] or name
 
     event_date = date.today()
     if len(parts) >= 2 and parts[1]:
@@ -72,7 +82,7 @@ def _parse_event_metadata(name: str) -> tuple[str, date, str]:
             event_date = date.fromisoformat(parts[1])
 
     address = parts[2] if len(parts) >= 3 and parts[2] else DEFAULT_ADDRESS
-    return description, event_date, address
+    return title, event_date, address
 
 
 def _import_folder_for_event(
@@ -128,9 +138,15 @@ def main() -> None:
         "(désactive le mode sous-dossiers).",
     )
     parser.add_argument(
+        "--title",
+        default=None,
+        help="Titre à utiliser (override le nom déduit du dossier/sous-dossier).",
+    )
+    parser.add_argument(
         "--description",
         default=None,
-        help="Description à utiliser (override le nom déduit du dossier/sous-dossier).",
+        help="Description longue de l'événement. Vide par défaut : elle ne se "
+        "déduit pas d'un nom de dossier, c'est --title qui en vient.",
     )
     parser.add_argument(
         "--event-date",
@@ -181,11 +197,16 @@ def main() -> None:
     subdirs = sorted(p for p in args.folder.iterdir() if p.is_dir() and not p.name.startswith("."))
 
     if not subdirs:
-        description = args.description or f"Import local — {args.folder.name}"
+        title = args.title or f"Import local — {args.folder.name}"
         event_date = date.fromisoformat(args.event_date) if args.event_date else date.today()
         address = args.address or DEFAULT_ADDRESS
-        event = create_event(description, event_date, address)
-        logger.info("événement créé : id=%s (%s)", event.id, event.description)
+        event = create_event(
+            title=title,
+            description=args.description or "",
+            event_date=event_date,
+            address=address,
+        )
+        logger.info("événement créé : id=%s (%s)", event.id, event.title)
         total = _import_folder_for_event(
             args.folder, event.id, face_detector, face_embedder, object_storage
         )
@@ -204,16 +225,21 @@ def main() -> None:
     total_events = 0
     total_images = 0
     for subdir in subdirs:
-        description, event_date, address = _parse_event_metadata(subdir.name)
-        if args.description:
-            description = args.description
+        title, event_date, address = _parse_event_metadata(subdir.name)
+        if args.title:
+            title = args.title
         if args.event_date:
             event_date = date.fromisoformat(args.event_date)
         if args.address:
             address = args.address
 
-        event = create_event(description, event_date, address)
-        logger.info("événement créé : id=%s (%s)", event.id, event.description)
+        event = create_event(
+            title=title,
+            description=args.description or "",
+            event_date=event_date,
+            address=address,
+        )
+        logger.info("événement créé : id=%s (%s)", event.id, event.title)
         total_images += _import_folder_for_event(
             subdir, event.id, face_detector, face_embedder, object_storage
         )

@@ -46,6 +46,7 @@ class EvidenceSchema(BaseModel):
 
 class EventMatchSchema(BaseModel):
     event_id: int
+    title: str
     description: str
     event_date: date
     address: str
@@ -91,6 +92,7 @@ def to_search_response(result: SearchResult, evidence_urls: dict[int, str]) -> S
         results=[
             EventMatchSchema(
                 event_id=match.event.id,
+                title=match.event.title,
                 description=match.event.description,
                 event_date=match.event.event_date,
                 address=match.event.address,

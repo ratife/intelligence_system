@@ -8,6 +8,7 @@
 
 export interface EventSummary {
   id: number;
+  title: string;
   description: string;
   event_date: string;
   address: string;

@@ -10,9 +10,19 @@ from facereco.domain.services.event_scoring import (
 from facereco.domain.value_objects.bounding_box import BoundingBox
 
 EVENT_A = Event(
-    id=1, description="Séminaire annuel", event_date=date(2026, 3, 14), address="Antananarivo"
+    id=1,
+    title="Séminaire annuel",
+    description="",
+    event_date=date(2026, 3, 14),
+    address="Antananarivo",
 )
-EVENT_B = Event(id=2, description="Conférence", event_date=date(2026, 4, 1), address="Fianarantsoa")
+EVENT_B = Event(
+    id=2,
+    title="Conférence",
+    description="",
+    event_date=date(2026, 4, 1),
+    address="Fianarantsoa",
+)
 
 
 def _candidate(event: Event, similarity: float, image_id: int = 1) -> FaceCandidate:

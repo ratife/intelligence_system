@@ -39,12 +39,12 @@ from facereco.domain.value_objects.model_version import ModelVersion
 _LIST_SQL = text(
     """
     WITH page AS (
-        SELECT id, description, event_date, address
+        SELECT id, title, description, event_date, address
         FROM events
         ORDER BY event_date DESC, id DESC
         LIMIT :limit OFFSET :offset
     )
-    SELECT p.id, p.description, p.event_date, p.address,
+    SELECT p.id, p.title, p.description, p.event_date, p.address,
            img.total AS image_count,
            img.done AS indexed_count,
            img.pending AS pending_count,
@@ -72,7 +72,9 @@ _LIST_SQL = text(
     """
 )
 
-_EVENT_SQL = text("SELECT id, description, event_date, address FROM events WHERE id = :event_id")
+_EVENT_SQL = text(
+    "SELECT id, title, description, event_date, address FROM events WHERE id = :event_id"
+)
 
 _IMAGES_SQL = text(
     """
@@ -122,6 +124,7 @@ class PostgresEventCatalog(EventCatalogPort):
                 EventSummary(
                     event=Event(
                         id=row.id,
+                        title=row.title,
                         description=row.description,
                         event_date=row.event_date,
                         address=row.address,
@@ -189,6 +192,7 @@ class PostgresEventCatalog(EventCatalogPort):
             summary=EventSummary(
                 event=Event(
                     id=event_row.id,
+                    title=event_row.title,
                     description=event_row.description,
                     event_date=event_row.event_date,
                     address=event_row.address,

@@ -13,7 +13,11 @@ from facereco.domain.value_objects.event_catalog import (
 )
 
 EVENT = Event(
-    id=7, description="Séminaire annuel", event_date=date(2026, 3, 14), address="Antananarivo"
+    id=7,
+    title="Séminaire annuel",
+    description="Trois jours de restitution.",
+    event_date=date(2026, 3, 14),
+    address="Antananarivo",
 )
 
 

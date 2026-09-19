@@ -117,9 +117,10 @@ index-folder: ## Teste détection/qualité/embedding sur un dossier local, sans 
 	$(PYTHON) -m facereco.interface.cli.index_folder $(FOLDER)
 
 .PHONY: import-folder
-import-folder: ## Indexe pour de vrai un dossier local (events/event_images + upload S3 + persistance) : make import-folder FOLDER=chemin [EVENT_ID=1] [DESCRIPTION=...] [EVENT_DATE=AAAA-MM-JJ] [ADDRESS=...]
+import-folder: ## Indexe pour de vrai un dossier local (events/event_images + upload S3 + persistance) : make import-folder FOLDER=chemin [EVENT_ID=1] [TITLE=...] [DESCRIPTION=...] [EVENT_DATE=AAAA-MM-JJ] [ADDRESS=...]
 	$(PYTHON) -m facereco.interface.cli.import_folder $(FOLDER) \
 		$(if $(EVENT_ID),--event-id $(EVENT_ID)) \
+		$(if $(TITLE),--title "$(TITLE)") \
 		$(if $(DESCRIPTION),--description "$(DESCRIPTION)") \
 		$(if $(EVENT_DATE),--event-date $(EVENT_DATE)) \
 		$(if $(ADDRESS),--address "$(ADDRESS)")

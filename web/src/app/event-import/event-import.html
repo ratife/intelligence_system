@@ -28,8 +28,8 @@
       <fieldset class="event-fields">
         <legend>Nouvel événement</legend>
         <label>
-          Description
-          <input type="text" name="description" [(ngModel)]="newDescription" required />
+          Titre
+          <input type="text" name="title" [(ngModel)]="newTitle" required />
         </label>
         <label>
           Date
@@ -38,6 +38,10 @@
         <label>
           Adresse
           <input type="text" name="address" [(ngModel)]="newAddress" required />
+        </label>
+        <label class="description-field">
+          Description <span class="optional">facultative</span>
+          <textarea name="description" rows="4" [(ngModel)]="newDescription"></textarea>
         </label>
       </fieldset>
     } @else {
@@ -49,7 +53,7 @@
             <option [ngValue]="null">— sélectionner —</option>
             @for (event of events(); track event.id) {
               <option [ngValue]="event.id">
-                #{{ event.id }} — {{ event.description }} ({{ event.event_date }})
+                #{{ event.id }} — {{ event.title }} ({{ event.event_date }})
               </option>
             }
           </select>

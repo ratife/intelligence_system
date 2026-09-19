@@ -82,7 +82,11 @@ def _image_size(image_bytes: bytes) -> tuple[int | None, int | None]:
 
 def _to_event(row: EventModel) -> Event:
     return Event(
-        id=row.id, description=row.description, event_date=row.event_date, address=row.address
+        id=row.id,
+        title=row.title,
+        description=row.description,
+        event_date=row.event_date,
+        address=row.address,
     )
 
 
@@ -98,9 +102,11 @@ def get_event(event_id: int) -> Event | None:
         return _to_event(row) if row is not None else None
 
 
-def create_event(description: str, event_date: date, address: str) -> Event:
+def create_event(title: str, description: str, event_date: date, address: str) -> Event:
     with session_scope() as session:
-        row = EventModel(description=description, event_date=event_date, address=address)
+        row = EventModel(
+            title=title, description=description, event_date=event_date, address=address
+        )
         session.add(row)
         session.flush()
         event = _to_event(row)

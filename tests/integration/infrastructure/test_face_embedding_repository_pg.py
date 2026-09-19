@@ -21,8 +21,8 @@ def _unit_embedding(index: int) -> EmbeddingVector:
 def _seed_event_and_image(session) -> None:
     session.execute(
         text(
-            "INSERT INTO events (id, description, event_date, address) "
-            "VALUES (1, 'Séminaire', '2026-03-14', 'Antananarivo')"
+            "INSERT INTO events (id, title, description, event_date, address) "
+            "VALUES (1, 'Séminaire', '', '2026-03-14', 'Antananarivo')"
         )
     )
     session.execute(

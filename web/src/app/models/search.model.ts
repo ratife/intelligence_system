@@ -31,6 +31,7 @@ export interface Evidence {
 
 export interface EventMatch {
   event_id: number;
+  title: string;
   description: string;
   event_date: string;
   address: string;

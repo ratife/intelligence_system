@@ -21,9 +21,9 @@ MODEL_VERSION = "arcface-r100-v1"  # doit correspondre au fake embedder du conft
 def _seed(session) -> None:
     session.execute(
         text(
-            "INSERT INTO events (id, description, event_date, address) VALUES "
-            "(1, 'Séminaire annuel', '2026-03-14', 'Antananarivo'), "
-            "(2, 'Remise de diplômes', '2026-06-30', 'Fianarantsoa')"
+            "INSERT INTO events (id, title, description, event_date, address) VALUES "
+            "(1, 'Séminaire annuel', 'Trois jours de restitution.', '2026-03-14', 'Antananarivo'), "
+            "(2, 'Remise de diplômes', '', '2026-06-30', 'Fianarantsoa')"
         )
     )
     session.execute(
@@ -108,7 +108,8 @@ def test_detail_returns_faces_with_signed_urls_never_storage_uris(client, seeded
 
     assert response.status_code == 200
     body = response.json()
-    assert body["event"]["description"] == "Séminaire annuel"
+    assert body["event"]["title"] == "Séminaire annuel"
+    assert body["event"]["description"] == "Trois jours de restitution."
     assert [image["image_id"] for image in body["images"]] == [1, 2]
 
     indexed, pending = body["images"]

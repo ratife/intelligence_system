@@ -46,7 +46,11 @@ TWO_FACES = ONE_FACE + [
 ]
 
 EVENT = Event(
-    id=4821, description="Séminaire annuel", event_date=date(2026, 3, 14), address="Antananarivo"
+    id=4821,
+    title="Séminaire annuel",
+    description="",
+    event_date=date(2026, 3, 14),
+    address="Antananarivo",
 )
 
 

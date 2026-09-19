@@ -27,8 +27,8 @@ PHOTO_BYTES = b"query-image-bytes"  # doit correspondre à `query_image` du conf
 def _seed_and_index(test_app, session) -> None:
     session.execute(
         text(
-            "INSERT INTO events (id, description, event_date, address) VALUES "
-            "(1, 'Séminaire annuel', '2026-03-14', 'Antananarivo')"
+            "INSERT INTO events (id, title, description, event_date, address) VALUES "
+            "(1, 'Séminaire annuel', 'Trois jours de restitution.', '2026-03-14', 'Antananarivo')"
         )
     )
     session.execute(
@@ -74,7 +74,9 @@ def test_search_by_face_finds_indexed_event(client, test_app) -> None:
     assert body["query"]["faces_detected"] == 1
     assert len(body["results"]) == 1
     assert body["results"][0]["event_id"] == 1
-    assert body["results"][0]["description"] == "Séminaire annuel"
+    # La recherche expose les deux : le titre sert d'intitulé de résultat.
+    assert body["results"][0]["title"] == "Séminaire annuel"
+    assert body["results"][0]["description"] == "Trois jours de restitution."
     assert body["results"][0]["confidence"] == pytest.approx(1.0 + 0.02 * 0.6931, abs=1e-3)
 
 

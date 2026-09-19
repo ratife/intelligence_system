@@ -11,8 +11,8 @@ pytestmark = pytest.mark.integration
 def _insert_event(session, event_id: int) -> None:
     session.execute(
         text(
-            "INSERT INTO events (id, description, event_date, address) "
-            "VALUES (:id, 'Séminaire', '2026-03-14', 'Antananarivo')"
+            "INSERT INTO events (id, title, description, event_date, address) "
+            "VALUES (:id, 'Séminaire', 'Restitution annuelle.', '2026-03-14', 'Antananarivo')"
         ),
         {"id": event_id},
     )
@@ -47,7 +47,10 @@ def test_get_event_returns_entity(db_session) -> None:
     event = repository.get_event(1)
 
     assert event is not None
-    assert event.description == "Séminaire"
+    # Les deux, et avec des valeurs distinctes : c'est le seul test qui couvre
+    # le chemin ORM `EventModel` → `_to_event`, celui qu'emprunte la recherche.
+    assert event.title == "Séminaire"
+    assert event.description == "Restitution annuelle."
     assert event.address == "Antananarivo"
 
 
