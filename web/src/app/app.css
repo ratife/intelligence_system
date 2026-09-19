@@ -28,6 +28,9 @@
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0;
   padding: var(--space-2) var(--space-3) var(--space-3);
   font-family: var(--font-display);
@@ -37,6 +40,15 @@
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
+}
+
+/* Dimensions portées aussi par les attributs `width`/`height` du HTML : sans
+   elles, la place du logo n'est connue qu'une fois l'image chargée, et le menu
+   se décale sous les yeux au premier rendu. */
+.brand-mark {
+  flex: none;
+  width: 28px;
+  height: 28px;
 }
 
 .nav-list {
@@ -161,8 +173,13 @@
     padding: var(--space-4) var(--space-2);
   }
 
+  /* La marque survit au repli, le nom non : à 64 px de large il n'y a plus la
+     place d'un mot, mais c'est précisément là qu'une identité doit tenir. Le
+     nom passe en masquage visuel et non en `display: none`, pour rester lu par
+     un lecteur d'écran — le logo est décoratif, c'est lui qui nomme. */
   .brand {
-    display: none;
+    justify-content: center;
+    padding: var(--space-2) 0 var(--space-3);
   }
 
   .tab {
@@ -175,6 +192,7 @@
     padding: var(--space-2) 0;
   }
 
+  .brand-name,
   .tab-label,
   .actor-name {
     position: absolute;
