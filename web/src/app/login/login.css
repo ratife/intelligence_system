@@ -18,6 +18,16 @@
   padding: var(--space-6);
 }
 
+/* Au fer à gauche et non centrée : le titre et le sous-titre le sont, une
+   marque centrée au-dessus casserait la colonne. La marge négative resserre
+   l'écart que le `gap` de la carte laisserait sous elle — même procédé que
+   `.gate .subtitle` juste en dessous. */
+.gate-mark {
+  width: 56px;
+  height: 56px;
+  margin-bottom: calc(var(--space-2) * -1);
+}
+
 .gate h1 {
   margin: 0;
   font-size: 1.35rem;

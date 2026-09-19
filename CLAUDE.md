@@ -317,6 +317,38 @@ to system fonts, and a facial-recognition system has no business handing a
 third party a user's IP on every page load. Don't reintroduce a `<link>` to
 fonts.googleapis.com.
 
+**The logo is the RCR mark, bundled like the fonts and for the same reason.**
+`web/public/rcr-logo.png` was fetched once from `rcr-tolona.com/images/rcr.png`;
+it is not hot-linked, because a closed network would silently render the app
+unbranded and a facial-recognition system has no business announcing each page
+load to a third party. Three things about it:
+
+- **It carries its own background** — a filled teal disc (`#188a92`, the brand's
+  `primary`) with white nodes around a map of Madagascar. So one file serves
+  both themes, and the mark is never recoloured per theme. Measured at 4.13:1 on
+  the light sidebar and 3.99:1 on the dark one: above the 3:1 floor for
+  graphical objects, which logotypes are exempt from anyway.
+- **It ships at 192×192 in a 64-colour palette, 4 kB, down from 500×500 and
+  166 kB.** 192 covers the largest display size (56px) at 3x. The quantisation
+  was checked rather than assumed: composited onto both theme backgrounds at the
+  sizes actually shown, no pixel deviates by more than 9/255 from a full-quality
+  resize. Don't re-add the original — it is 40× the weight for no visible gain.
+- **It is decorative in both placements** (`alt=""`): the sidebar `.brand` at
+  28px and the login `.gate-mark` at 56px, each next to text that already names
+  the app.
+
+That second placement is why the collapsed rail changed. Under 900px `.brand`
+used to be `display: none`, leaving the rail with no identity at all; now the
+mark stays and only `.brand-name` is visually hidden, joining `.tab-label` and
+`.actor-name` in the existing pattern — so the name is still read aloud while
+the logo holds the corner. A mark is exactly what survives a 64px column, which
+is the argument for having one.
+
+`public/favicon.ico` is regenerated from the same artwork (16/32/48, straight
+from the 500px original rather than from the reduced mark, to avoid stacking two
+resamplings). At 16px the nodes and the map merge into a teal disc — inherent to
+thin strokes drawn for 500px, not something to fix without redrawing the brand.
+
 **The guard covers `styles.css` too, and it is not only about hex.** The earlier
 rule (hex under `web/src/app/*/*.css`) left two blind spots that both filled up:
 `styles.css` itself was never scanned, and `rgba()` was never matched — so three

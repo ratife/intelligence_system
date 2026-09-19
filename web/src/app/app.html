@@ -1,7 +1,10 @@
 @if (credentials.unlocked()) {
   <div class="shell">
     <nav class="sidebar" aria-label="Navigation principale">
-      <p class="brand">Recherche faciale</p>
+      <p class="brand">
+        <img class="brand-mark" src="rcr-logo.png" alt="" width="28" height="28" />
+        <span class="brand-name">Recherche faciale</span>
+      </p>
 
       <ul class="nav-list">
         @for (item of pages; track item.id) {
