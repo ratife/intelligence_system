@@ -22,6 +22,7 @@ type Mode = 'new' | 'existing';
 export class EventImport implements OnDestroy {
   mode: Mode = 'new';
 
+  newTitle = '';
   newDescription = '';
   newEventDate = '';
   newAddress = '';
@@ -214,10 +215,11 @@ export class EventImport implements OnDestroy {
       return;
     }
     // Sans cette garde, un formulaire à moitié rempli crée un événement sans
-    // description ni date — l'API les accepte vides, et il reste ensuite dans
-    // le catalogue sans que rien ne permette de l'identifier.
+    // titre ni date — et il reste ensuite dans le catalogue sans que rien ne
+    // permette de l'identifier. La description, elle, est facultative : c'est
+    // un texte libre, pas ce qui nomme l'événement.
     if (this.mode === 'new' && !this.hasCompleteEventFields()) {
-      this.error.set("Renseignez la description, la date et l'adresse du nouvel événement.");
+      this.error.set("Renseignez le titre, la date et l'adresse du nouvel événement.");
       return;
     }
 
@@ -237,6 +239,7 @@ export class EventImport implements OnDestroy {
 
     this.inFlight = this.eventImportService
       .createEvent(this.credentials.actorId, this.credentials.bearerToken, {
+        title: this.newTitle.trim(),
         description: this.newDescription.trim(),
         event_date: this.newEventDate,
         address: this.newAddress.trim(),
@@ -275,7 +278,7 @@ export class EventImport implements OnDestroy {
 
   private hasCompleteEventFields(): boolean {
     return (
-      this.newDescription.trim().length > 0 &&
+      this.newTitle.trim().length > 0 &&
       this.newEventDate.length > 0 &&
       this.newAddress.trim().length > 0
     );

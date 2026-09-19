@@ -4,10 +4,13 @@
   </button>
 
   <header class="detail-header">
-    <h1>{{ detail().event.description }}</h1>
+    <h1>{{ detail().event.title }}</h1>
     <p class="subtitle">
       {{ formatDate(detail().event.event_date) }} — {{ detail().event.address }}
     </p>
+    @if (detail().event.description) {
+      <p class="event-description">{{ detail().event.description }}</p>
+    }
   </header>
 
   @if (!detail().event.is_searchable) {
@@ -83,7 +86,7 @@
           <div class="image-media">
             <app-face-frame
               [src]="card.image.image_url"
-              [alt]="'Image ' + card.image.image_id + ' de ' + detail().event.description"
+              [alt]="'Image ' + card.image.image_id + ' de ' + detail().event.title"
               [boxes]="card.boxes"
             />
           </div>

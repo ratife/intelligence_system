@@ -17,7 +17,13 @@ from facereco.domain.value_objects.model_version import ModelVersion
 from .fakes import ScriptedEventCatalog
 
 MODEL = ModelVersion(value="arcface-r100-v1")
-EVENT = Event(id=7, description="Séminaire", event_date=date(2026, 3, 14), address="Antananarivo")
+EVENT = Event(
+    id=7,
+    title="Séminaire",
+    description="",
+    event_date=date(2026, 3, 14),
+    address="Antananarivo",
+)
 SUMMARY = EventSummary(
     event=EVENT,
     image_count=1,

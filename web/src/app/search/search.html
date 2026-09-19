@@ -111,13 +111,13 @@
         <div class="result-media">
           <app-face-frame
             [src]="card.match.evidence.image_url"
-            [alt]="'Photo de : ' + card.match.description"
+            [alt]="'Photo de : ' + card.match.title"
             [boxes]="card.boxes"
           />
         </div>
 
         <div class="result-body">
-          <h2>{{ card.match.description }}</h2>
+          <h2>{{ card.match.title }}</h2>
           <p class="meta">{{ card.match.event_date }} — {{ card.match.address }}</p>
 
           <div class="evidence">

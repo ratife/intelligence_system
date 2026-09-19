@@ -15,7 +15,11 @@ from facereco.infrastructure.db.models import EventImageModel, EventModel, FaceE
 
 def _to_event(row: EventModel) -> Event:
     return Event(
-        id=row.id, description=row.description, event_date=row.event_date, address=row.address
+        id=row.id,
+        title=row.title,
+        description=row.description,
+        event_date=row.event_date,
+        address=row.address,
     )
 
 

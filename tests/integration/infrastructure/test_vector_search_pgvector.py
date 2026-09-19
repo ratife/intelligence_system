@@ -21,9 +21,9 @@ def _unit_vector(index: int) -> EmbeddingVector:
 def _seed(session) -> None:
     session.execute(
         text(
-            "INSERT INTO events (id, description, event_date, address) VALUES "
-            "(1, 'Séminaire', '2026-03-14', 'Antananarivo'), "
-            "(2, 'Conférence', '2026-06-01', 'Fianarantsoa')"
+            "INSERT INTO events (id, title, description, event_date, address) VALUES "
+            "(1, 'Séminaire', '', '2026-03-14', 'Antananarivo'), "
+            "(2, 'Conférence', '', '2026-06-01', 'Fianarantsoa')"
         )
     )
     session.execute(

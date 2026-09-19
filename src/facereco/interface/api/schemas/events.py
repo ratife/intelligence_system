@@ -25,6 +25,7 @@ class EventSummarySchema(BaseModel):
     """Un événement et son état d'indexation, tel qu'il apparaît dans la liste."""
 
     id: int
+    title: str
     description: str
     event_date: date
     address: str
@@ -80,6 +81,7 @@ class EventDetailResponseSchema(BaseModel):
 def _to_summary(summary: EventSummary) -> EventSummarySchema:
     return EventSummarySchema(
         id=summary.event.id,
+        title=summary.event.title,
         description=summary.event.description,
         event_date=summary.event.event_date,
         address=summary.event.address,

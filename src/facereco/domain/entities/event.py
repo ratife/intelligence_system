@@ -23,9 +23,17 @@ class IndexStatus(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class Event:
-    """Événement : description, date, adresse — entité racine existante."""
+    """Événement : titre, description, date, adresse — entité racine existante.
+
+    `title` est l'intitulé court, celui que portent les listes, l'en-tête de la
+    fiche et les résultats de recherche ; `description` est le texte libre, et
+    peut être vide. Les deux étaient auparavant confondus dans `description`,
+    qui devait à la fois nommer et décrire — plus elle décrivait, moins elle
+    nommait.
+    """
 
     id: int
+    title: str
     description: str
     event_date: date
     address: str

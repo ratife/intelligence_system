@@ -14,6 +14,17 @@
   margin-bottom: var(--space-1);
 }
 
+/* `pre-line` est ce qui fait survivre les retours à la ligne saisis dans la
+   zone de texte : sans lui, un compte rendu en paragraphes se retrouverait
+   aplati en un seul bloc. La largeur reste bornée — une ligne de texte trop
+   longue se lit mal, quelle que soit la place disponible. */
+.event-description {
+  margin: var(--space-3) 0 0;
+  max-width: 68ch;
+  white-space: pre-line;
+  color: var(--text-secondary);
+}
+
 .images-title {
   margin: var(--space-6) 0 var(--space-4);
   font-size: 1.05rem;

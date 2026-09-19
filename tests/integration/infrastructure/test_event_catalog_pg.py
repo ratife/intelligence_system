@@ -24,10 +24,17 @@ ZERO_VECTOR = "[" + ",".join(["0"] * 511) + ",1]"
 def _insert_event(session, event_id: int, event_date: str = "2026-03-14") -> None:
     session.execute(
         text(
-            "INSERT INTO events (id, description, event_date, address) "
-            "VALUES (:id, :description, :event_date, 'Antananarivo')"
+            "INSERT INTO events (id, title, description, event_date, address) "
+            "VALUES (:id, :title, :description, :event_date, 'Antananarivo')"
         ),
-        {"id": event_id, "description": f"Événement {event_id}", "event_date": event_date},
+        {
+            "id": event_id,
+            # Titre et description délibérément différents : c'est ce qui fait
+            # tomber le test si un SELECT nommé confond les deux colonnes.
+            "title": f"Événement {event_id}",
+            "description": f"Compte rendu de l'événement {event_id}.",
+            "event_date": event_date,
+        },
     )
 
 

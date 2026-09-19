@@ -13,7 +13,7 @@ from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
 
 from facereco.domain.entities.event import Event
 from facereco.domain.ports.face_detector import FaceDetectorPort
@@ -41,13 +41,28 @@ MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024
 
 class EventSchema(BaseModel):
     id: int
+    title: str
     description: str
     event_date: date
     address: str
 
 
 class CreateEventRequest(BaseModel):
-    description: str
+    """Seul schéma d'entrée portant l'intitulé, et seul endroit du dépôt qui
+    contraigne une longueur.
+
+    `strip_whitespace` n'est pas décoratif : sans lui, `min_length=1` laisserait
+    passer une suite d'espaces, et un événement se retrouverait sans intitulé
+    lisible dans les listes. La borne haute est celle du repli de la migration
+    `0002`, qui tronque à 200 — les deux doivent rester d'accord.
+
+    La contrainte ne vaut que pour l'écriture : la poser sur `EventSchema`, qui
+    sert de `response_model`, ferait échouer la sérialisation d'une ligne
+    ancienne au titre plus long.
+    """
+
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+    description: str = ""
     event_date: date
     address: str
 
@@ -68,6 +83,7 @@ class ImportImagesResponse(BaseModel):
 def _to_schema(event: Event) -> EventSchema:
     return EventSchema(
         id=event.id,
+        title=event.title,
         description=event.description,
         event_date=event.event_date,
         address=event.address,
@@ -96,7 +112,12 @@ async def create_new_event(
     _actor_id: Annotated[str, Depends(get_current_actor_id)],
     body: CreateEventRequest,
 ) -> EventSchema:
-    event = create_event(body.description, body.event_date, body.address)
+    event = create_event(
+        title=body.title,
+        description=body.description,
+        event_date=body.event_date,
+        address=body.address,
+    )
     return _to_schema(event)
 
 

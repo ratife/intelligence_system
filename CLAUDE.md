@@ -252,6 +252,26 @@ no bbox for them (the screen mirrors what is known, it doesn't invent). Rejectio
 reasons are humanised by the shared `rejection-reason.ts`, also used by the
 dashboard.
 
+**`title` names, `description` describes — and only one of them appears in a
+list.** An event used to carry a single `description`, which stood in as the
+heading everywhere: card title, detail `<h1>`, search-result `<h2>`, import
+`<option>`. One field held two roles that exclude each other — the more it
+described, the less it named. Migration `0002` split them and backfilled every
+existing title from its description.
+
+So: `title` is required and is the heading in all four of those places.
+`description` is optional (empty string, never null — a nullable type would have
+had to travel through the entity, three Pydantic schemas and three TypeScript
+models to say what `''` says), and appears on **one screen only**, the detail
+sheet, behind an `@if` on its emptiness. Don't reintroduce it into the catalogue
+or search cards: those lists answer *which event*, not *what happened there*.
+
+Two details the form must keep: the description is a `<textarea>` in a
+`flex-basis: 100%` label, because the shared `fieldset` is a flex row and a
+four-field row would crush it; and `.event-description` uses
+`white-space: pre-line`, without which the paragraph breaks someone typed are
+flattened into one block on the way back out.
+
 **Styling goes through a shared design system, not per-component CSS.**
 `web/src/styles.css` holds the design tokens (surfaces, one ink per role,
 accent, status colors, radii, spacing scale, shadows, a single focus ring) and
@@ -584,7 +604,39 @@ ports on purpose.
   would present as finished.
 - Discarded faces are listed with their reason but **not framed**:
   `rejected_faces` stores no bbox. Framing them would need a schema change
-  (a `bbox` column, so migration `0002`) — deliberately not done here.
+  (a `bbox` column) — deliberately not done here.
+
+## Migrations
+
+`migrations/*.sql`, appliquées **dans l'ordre du nom**. Il n'y a pas d'Alembic :
+le versionnement tient au préfixe numérique, et chaque fichier doit être
+**rejouable** — la fixture e2e les applique à chaque test sur un conteneur
+partagé, et `make migrate` peut être relancé sans condition.
+`tests/integration/infrastructure/test_migrations.py` vérifie les deux
+propriétés qui comptent : le rejeu, et la reprise des lignes antérieures.
+
+**Trois chemins d'application, qui n'ont pas les mêmes déclencheurs :**
+
+- **Volume neuf** : `docker-entrypoint-initdb.d` joue tout le répertoire. C'est
+  le seul cas automatique.
+- **Base existante** : `make migrate`, et rien d'autre. Postgres n'exécute son
+  répertoire d'initialisation qu'à la création du volume, donc une machine déjà
+  en service — un serveur, un poste de développement — ne verra jamais seule une
+  migration ajoutée depuis. L'échec est silencieux : l'API démarre normalement
+  et ne tombe qu'au premier accès à la colonne manquante. **Un `git pull` ne
+  suffit pas.**
+- **Tests** : `tests/db_schema.py` (`apply_migrations`), partagé par les deux
+  conftests, qui codaient auparavant chacun en dur le chemin de `0001_init.sql`
+   — une migration ajoutée n'était donc lue par aucun des deux.
+
+`apply_migrations` utilise `exec_driver_sql` et non `text()` : ce dernier lit
+`:mot` comme un paramètre lié, et la première migration contenant un « : » dans
+un littéral échouerait de façon illisible.
+
+`events` est documentée comme la table du client (§2.1). `0002` y ajoute
+`title`, la seule colonne de ce service : tant que le stack sert la base de démo
+c'est sans conséquence, mais si un jour il pointe vers le vrai système, c'est le
+point à renégocier plutôt qu'à migrer.
 
 ## Testing conventions
 
@@ -593,7 +645,7 @@ ports on purpose.
   `DeterministicFaceEmbedder` etc.), no Docker required.
 - `tests/integration`: real adapters against `testcontainers` Postgres+pgvector
   and Redis (`tests/integration/infrastructure/conftest.py`). Schema is
-  (re)applied per test module from `migrations/0001_init.sql`; tables are
+  (re)applied per test module by `tests/db_schema.py`; tables are
   truncated after each test.
 - `tests/e2e`: full FastAPI app wired through `TestClient`, real Postgres via
   testcontainers, but ML/queue/storage adapters swapped for deterministic

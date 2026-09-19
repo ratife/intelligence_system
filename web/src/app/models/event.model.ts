@@ -5,12 +5,15 @@
 
 export interface FaceEvent {
   id: number;
+  title: string;
   description: string;
   event_date: string;
   address: string;
 }
 
 export interface CreateEventRequest {
+  title: string;
+  /** Texte libre, facultatif : l'API accepte une chaîne vide. */
   description: string;
   event_date: string;
   address: string;

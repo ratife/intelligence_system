@@ -8,7 +8,6 @@ pas dans la boucle rapide `pytest tests/unit`.
 from __future__ import annotations
 
 from collections.abc import Iterator
-from pathlib import Path
 
 import pytest
 import redis as redis_lib
@@ -17,7 +16,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from testcontainers.postgres import PostgresContainer
 from testcontainers.redis import RedisContainer
 
-MIGRATIONS_FILE = Path(__file__).resolve().parents[3] / "migrations" / "0001_init.sql"
+from tests.db_schema import apply_migrations
 
 
 @pytest.fixture(scope="module")
@@ -30,8 +29,7 @@ def postgres_container() -> Iterator[PostgresContainer]:
 def db_engine(postgres_container: PostgresContainer):
     url = postgres_container.get_connection_url().replace("psycopg2", "psycopg")
     engine = create_engine(url)
-    with engine.begin() as connection:
-        connection.execute(text(MIGRATIONS_FILE.read_text()))
+    apply_migrations(engine)
     yield engine
     engine.dispose()
 

@@ -31,11 +31,19 @@ class Base(DeclarativeBase):
 
 
 class EventModel(Base):
-    """Schéma existant du client (rappel, §2.1) — non modifié par ce service."""
+    """Schéma existant du client (rappel, §2.1), à une colonne près.
+
+    `title` est la seule addition de ce service : la `description` d'origine
+    servait d'intitulé faute de mieux (migration `0002`). Si ce stack venait à
+    pointer vers la vraie table du client plutôt que vers la base de démo, c'est
+    le point à renégocier — on ne modifie pas le schéma d'un système qu'on ne
+    possède pas.
+    """
 
     __tablename__ = "events"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     event_date: Mapped[dt.date] = mapped_column(Date, nullable=False)
     address: Mapped[str] = mapped_column(Text, nullable=False)
