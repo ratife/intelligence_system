@@ -69,6 +69,20 @@ up: ## Démarre l'infra locale (Postgres+pgvector, Redis, MinIO)
 down: ## Arrête tout ce que Docker fait tourner (infra + conteneurs applicatifs)
 	docker compose --profile app down
 
+# Postgres n'exécute `/docker-entrypoint-initdb.d` qu'à la CRÉATION du volume :
+# une base déjà initialisée ne verra jamais une migration ajoutée depuis. C'est
+# la seule façon de la lui appliquer. Les fichiers sont rejouables, la cible
+# aussi. Le répertoire `migrations/` est déjà monté dans le conteneur.
+.PHONY: migrate
+migrate: ## Applique les migrations SQL à la base en cours (idempotent)
+	@for f in $$(ls migrations/*.sql | sort); do \
+		echo "  -- $$f"; \
+		docker compose exec -T -e PGOPTIONS=-cclient_min_messages=warning postgres \
+			psql -q -v ON_ERROR_STOP=1 -U facereco -d facereco \
+			-f /docker-entrypoint-initdb.d/$$(basename $$f) > /dev/null || exit 1; \
+	done
+	@echo "  migrations appliquées"
+
 .PHONY: stack
 stack: .env ## Lance tout le système en conteneurs (API, worker, web sur :8080) — alternative à `start`
 	docker compose --profile app up -d --build

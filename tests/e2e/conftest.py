@@ -9,7 +9,6 @@ testé (agrégation, seuillage).
 from __future__ import annotations
 
 from collections.abc import Iterator
-from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
@@ -29,9 +28,9 @@ from facereco.interface.api.routers.events import router as events_router
 from facereco.interface.api.routers.indexing import router as indexing_router
 from facereco.interface.api.routers.search import router as search_router
 from facereco.interface.api.routers.statistics import router as statistics_router
+from tests.db_schema import apply_migrations
 from tests.unit.application.fakes import DeterministicFaceEmbedder, ScriptedFaceDetector
 
-MIGRATIONS_FILE = Path(__file__).resolve().parents[2] / "migrations" / "0001_init.sql"
 ACTOR_HEADERS = {"Authorization": f"Bearer {settings.api_bearer_token}", "X-Actor-Id": "e2e-test"}
 GROUP_PHOTO_BYTES = b"group-photo-bytes"
 
@@ -62,8 +61,7 @@ def postgres_container() -> Iterator[PostgresContainer]:
 def test_app(postgres_container, monkeypatch) -> Iterator[FastAPI]:
     url = postgres_container.get_connection_url().replace("psycopg2", "psycopg")
     engine = create_engine(url)
-    with engine.begin() as connection:
-        connection.execute(text(MIGRATIONS_FILE.read_text()))
+    apply_migrations(engine)
 
     monkeypatch.setattr(db_session_module, "engine", engine)
     monkeypatch.setattr(

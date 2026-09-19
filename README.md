@@ -103,6 +103,21 @@ Arrêt : `docker compose --profile app down`. **Le profil est nécessaire même
 pour arrêter** — sans lui, `down` ignore les services de profil et laisse l'API,
 le worker et le front en marche.
 
+## Appliquer une migration
+
+```bash
+make migrate
+```
+
+Postgres n'exécute `migrations/` qu'à la **création** du volume. Une base déjà
+en service — un serveur, un poste de développement — ne verra donc jamais seule
+une migration ajoutée depuis, et l'échec est silencieux : l'API démarre
+normalement et ne tombe qu'au premier accès à la colonne manquante. **Un
+`git pull` ne suffit pas.**
+
+Les migrations sont rejouables : la commande peut être relancée sans condition,
+et sur une base à jour elle ne fait rien.
+
 ## Lancer l'infrastructure seule (boucle de développement)
 
 ```bash
