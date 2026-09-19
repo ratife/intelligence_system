@@ -23,6 +23,7 @@ from facereco.infrastructure.config.settings import settings
 from facereco.infrastructure.db import session as db_session_module
 from facereco.infrastructure.storage.s3_object_storage import ObjectStoragePort
 from facereco.interface.api.error_handlers import register_error_handlers
+from facereco.interface.api.routers.admin_events import router as admin_events_router
 from facereco.interface.api.routers.auth import router as auth_router
 from facereco.interface.api.routers.events import router as events_router
 from facereco.interface.api.routers.indexing import router as indexing_router
@@ -74,6 +75,11 @@ def test_app(postgres_container, monkeypatch) -> Iterator[FastAPI]:
     app.include_router(indexing_router)
     app.include_router(statistics_router)
     app.include_router(events_router)
+    # Monté ici alors qu'il ne l'était pas : `POST /api/v1/admin/events` créait
+    # des événements sans aucune couverture, et c'est sa requête qui change.
+    # Seules les routes d'événement sont exercées ; l'import d'images, lui,
+    # exigerait un vrai stockage objet.
+    app.include_router(admin_events_router)
     register_error_handlers(app)
 
     query_image = b"query-image-bytes"
