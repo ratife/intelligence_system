@@ -192,11 +192,12 @@ actually about the IAM migration.
 
 A separate Angular workspace (standalone components, no NgModules — scaffolded
 with Angular CLI 21, 2025 file-naming style: `search.ts`/`.html`/`.css`, no
-`.component.` infix). Four tabs, toggled in `app.ts` via a plain signal (no
+`.component.` infix). Five tabs, toggled in `app.ts` via a plain signal (no
 Angular Router — `ng new` was run with `--routing=false`): **Tableau de bord**
 (`dashboard/`, `GET /api/v1/stats` — the default tab), **Événements**
 (`events/` + `event-detail/`, the catalogue routes below), **Recherche**
-(`search/`, `POST /api/v1/search/faces` then `POST /api/v1/search/by-face`)
+(`search/`, `POST /api/v1/search/faces` then `POST /api/v1/search/by-face`),
+**Caméra** (`camera-search/`, the same two calls in a continuous loop)
 and **Importer un événement**
 (`event-import/`, the `admin_events` routes below). `src/app/models/*.model.ts`
 mirror the backend's Pydantic schemas field-for-field by hand (no codegen
@@ -236,7 +237,40 @@ renumber them 1-based, the audit log and the API speak the 0-based one.
 Changing the selected face clears the previous results, which described a
 different person. If detection is unreachable the search stays available (the
 API will arbitrate) and the used face is still framed afterwards from
-`query.face_used`.
+`query.face_used`. The result card itself (frame + crop + scores) lives in
+`search-result/`, shared with the camera screen so the way a hit is proved
+can't diverge between the two.
+
+**Caméra (`camera-search/`) searches continuously from the workstation's
+webcam, with no API change** — each cycle is the same two calls as `search/`.
+What it must keep doing:
+
+- **Sequential loop**: the next cycle is scheduled *after* the previous one
+  completes, never on a fixed `setInterval` (the ONNX models are single
+  instances API-side). A `generation` counter discards a cycle left suspended
+  on the frame capture by a stop/restart.
+- **Detect first, search only if there is a face.** Detection costs neither
+  quota nor audit entry, so an empty frame spends nothing. With several faces
+  it searches the **largest** one (bbox area) — one search per face per cycle
+  would exhaust the 30/min quota with two people in view. All faces stay
+  framed and the caption names the one searched: the system chooses, in the
+  open. This is the one place it chooses for the operator; `search/` must not.
+- **Boxes go on the frozen frame that produced them**, never on the live
+  `<video>`, where they would lag a cycle behind. Frame URL and faces are set
+  together, on the detection response, for the same reason as `face-frame`'s
+  src-bound measurement.
+- **429 pauses the loop 60s** instead of hammering; other errors keep it
+  running (an API restart should find the screen still working). The camera
+  never starts on its own, pauses while the browser tab is hidden, and leaving
+  the Caméra tab destroys the component, which stops the tracks.
+- `getUserMedia` only exists in a **secure context**: `localhost` works, but
+  `http://<ip>` from another machine does not — the nginx image serves plain
+  HTTP. The screen says so rather than failing on `undefined`.
+
+Continuous camera matching is **real-time biometric identification**, a much
+heavier legal regime (GDPR art. 9, AI Act) than an ad-hoc search: Lot 0 must
+cover it explicitly before any real-data use. Nothing extra is stored —
+captured frames live only in browser memory, and the audit keeps its hash.
 
 **Événements: `events/` loads, `event-detail/` displays.** No router here
 either — the selected event is a signal, and `event-detail/` is presentational

@@ -1,5 +1,6 @@
 import { Component, signal } from '@angular/core';
 
+import { CameraSearch } from './camera-search/camera-search';
 import { Dashboard } from './dashboard/dashboard';
 import { EventImport } from './event-import/event-import';
 import { Events } from './events/events';
@@ -8,7 +9,7 @@ import { Search } from './search/search';
 import { AuthCredentialsService } from './services/auth-credentials.service';
 import { ThemeChoice, ThemeService } from './services/theme.service';
 
-type Page = 'dashboard' | 'events' | 'search' | 'import';
+type Page = 'dashboard' | 'events' | 'search' | 'camera' | 'import';
 
 interface NavItem {
   readonly id: Page;
@@ -36,6 +37,11 @@ const NAV_ITEMS: readonly NavItem[] = [
     icon: 'M12.5 12.5 16.5 16.5M8.75 14a5.25 5.25 0 1 1 0-10.5 5.25 5.25 0 0 1 0 10.5z',
   },
   {
+    id: 'camera',
+    label: 'Caméra',
+    icon: 'M3.5 6.5h3l1.5-2h4l1.5 2h3v9h-13zM10 13.25a2.75 2.75 0 1 1 0-5.5 2.75 2.75 0 0 1 0 5.5z',
+  },
+  {
     id: 'import',
     label: 'Importer un événement',
     icon: 'M10 13V3.5m0 0L6.5 7M10 3.5 13.5 7M3.5 13v2.5a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V13',
@@ -61,7 +67,7 @@ const THEME_ICONS: Record<ThemeChoice, string> = {
 
 @Component({
   selector: 'app-root',
-  imports: [Dashboard, Events, Search, EventImport, Login],
+  imports: [Dashboard, Events, Search, CameraSearch, EventImport, Login],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

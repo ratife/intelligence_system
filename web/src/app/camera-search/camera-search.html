@@ -1,0 +1,171 @@
+<div class="page">
+  <h1>Recherche par caméra</h1>
+  <p class="subtitle">
+    Analyse en continu l'image de la caméra du poste et retrouve les événements où la personne
+    filmée apparaît.
+  </p>
+
+  <section class="card controls">
+    <div class="control-row">
+      @if (running()) {
+        <button type="button" class="btn btn--primary" (click)="stop()">Arrêter la caméra</button>
+      } @else {
+        <button type="button" class="btn btn--primary" [disabled]="starting()" (click)="start()">
+          {{ starting() ? 'Ouverture de la caméra…' : 'Démarrer la caméra' }}
+        </button>
+      }
+
+      @if (devices().length > 1) {
+        <label>
+          Caméra
+          <select name="deviceId" [(ngModel)]="deviceId" (ngModelChange)="onDeviceChange()">
+            @for (device of devices(); track device.deviceId; let i = $index) {
+              <option [value]="device.deviceId">{{ device.label || 'Caméra ' + (i + 1) }}</option>
+            }
+          </select>
+        </label>
+      }
+
+      <label>
+        Analyse toutes les
+        <select name="intervalMs" [(ngModel)]="intervalMs">
+          @for (ms of intervals; track ms) {
+            <option [ngValue]="ms">{{ ms / 1000 }} s</option>
+          }
+        </select>
+      </label>
+
+      @if (running()) {
+        <span class="chip" [class]="phase() === 'throttled' ? 'tone-warning' : 'tone-active'">
+          <span class="chip-icon" aria-hidden="true">{{
+            phase() === 'throttled' ? '⏸' : '●'
+          }}</span>
+          @switch (phase()) {
+            @case ('detecting') {
+              Analyse de l'image…
+            }
+            @case ('searching') {
+              Recherche en cours…
+            }
+            @case ('throttled') {
+              Quota atteint — reprise à {{ resumeAt() | date: 'HH:mm:ss' }}
+            }
+            @case ('hidden') {
+              En pause — onglet masqué
+            }
+            @default {
+              En direct
+            }
+          }
+        </span>
+      }
+    </div>
+
+    <details class="advanced">
+      <summary>Options avancées</summary>
+      <div class="advanced-grid">
+        <label>
+          Seuil de similarité
+          <input
+            type="number"
+            name="threshold"
+            min="0"
+            max="1"
+            step="0.01"
+            [(ngModel)]="threshold"
+          />
+        </label>
+        <label>
+          Nombre de résultats
+          <input type="number" name="limit" min="1" max="100" [(ngModel)]="limit" />
+        </label>
+      </div>
+    </details>
+
+    <p class="note">
+      Une image sans visage n'est pas cherchée. Avec plusieurs visages, seul le
+      <b>plus grand</b> l'est — tous restent encadrés. {{ searchesLastMinute() }} recherche(s)
+      lancée(s) depuis cet écran dans la dernière minute, pour un quota d'environ
+      {{ quotaPerMinute }}/min par opérateur, partagé avec l'onglet Recherche.
+    </p>
+  </section>
+
+  @if (cameraError(); as message) {
+    <p class="alert alert--error" role="alert">{{ message }}</p>
+  }
+  @if (cycleError(); as message) {
+    <p class="alert alert--error" role="alert">Dernier cycle en échec : {{ message }}</p>
+  }
+
+  <div class="views">
+    <section class="view" [hidden]="!running()">
+      <h2 class="micro-label">En direct</h2>
+      <!-- Pas de cadres ici : calculés sur une image d'il y a un cycle, ils
+           tomberaient à côté d'un visage qui a bougé. -->
+      <video #video class="live" muted playsinline aria-label="Flux de la caméra"></video>
+    </section>
+
+    @if (frameUrl(); as frame) {
+      <section class="view">
+        <h2 class="micro-label">Dernière image analysée</h2>
+        <app-face-frame [src]="frame" alt="Image capturée par la caméra" [boxes]="frameBoxes()" />
+        <p class="note">
+          @if (frameFaces().length === 0) {
+            Aucun visage détecté — pas de recherche lancée.
+          } @else if (frameFaces().length === 1) {
+            Un visage détecté et recherché ({{ frameFaces()[0].quality | number: '1.2-2' }} de score
+            de détection).
+          } @else {
+            {{ frameFaces().length }} visages détectés — recherche sur le plus grand,
+            <b>#{{ usedFaceIndex() }}</b
+            >.
+          }
+        </p>
+      </section>
+    }
+  </div>
+
+  @if (searchedThisCycle() && results().length === 0) {
+    <p class="empty">Aucun événement trouvé au-dessus du seuil pour ce visage.</p>
+  }
+
+  @if (results().length > 0) {
+    <h2 class="section-title">Résultats de la dernière image</h2>
+    <div class="results">
+      @for (match of results(); track match.event_id) {
+        <app-search-result [match]="match" />
+      }
+    </div>
+  }
+
+  @if (journal().length > 0) {
+    <section class="card journal">
+      <div class="journal-head">
+        <h2 class="section-title">Reconnaissances de la session</h2>
+        <button type="button" class="btn btn--quiet btn--sm" (click)="clearJournal()">
+          Effacer
+        </button>
+      </div>
+      <ul class="journal-list">
+        @for (entry of journal(); track entry.eventId) {
+          <li class="journal-entry">
+            <app-face-crop
+              [src]="entry.best.evidence.image_url"
+              [bbox]="entry.best.evidence.bbox"
+              alt="Gros plan du meilleur visage reconnu"
+            />
+            <div class="journal-body">
+              <p class="journal-title">{{ entry.best.title }}</p>
+              <p class="meta">{{ entry.best.event_date }} — {{ entry.best.address }}</p>
+              <p class="meta">
+                Vu {{ entry.hits }} fois · dernière fois à {{ entry.lastSeen | date: 'HH:mm:ss' }} ·
+                meilleure confiance
+                <b class="score">{{ entry.best.confidence | number: '1.2-2' }}</b>
+              </p>
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</div>

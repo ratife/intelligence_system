@@ -1,0 +1,149 @@
+/* Coquille de page, cartes, champs, boutons, alertes et pastilles viennent du
+   socle partagé (`src/styles.css`). Ne reste ici que ce qui est propre à la caméra. */
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.control-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4);
+}
+
+.controls .note {
+  margin: 0;
+}
+
+.advanced summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  padding: var(--space-1) 0;
+}
+
+.advanced-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+
+/* --- Direct et image analysée, côte à côte ------------------------------- */
+
+.views {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+}
+
+.view {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-md);
+}
+
+.view[hidden] {
+  display: none;
+}
+
+.view .note {
+  margin: 0;
+}
+
+.live {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  border-radius: var(--radius-sm);
+}
+
+.view app-face-frame {
+  --frame-max-height: 360px;
+}
+
+/* --- Résultats et journal ------------------------------------------------- */
+
+.section-title {
+  margin: var(--space-5) 0 0;
+  font-size: 1.05rem;
+}
+
+.results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-5);
+  margin-top: var(--space-4);
+}
+
+.empty {
+  margin: var(--space-5) 0 0;
+  padding: var(--space-5);
+  text-align: center;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.journal {
+  margin-top: var(--space-5);
+}
+
+.journal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.journal-head .section-title {
+  margin: 0;
+}
+
+.journal-list {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+}
+
+.journal-entry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.journal-entry app-face-crop {
+  --crop-size: 56px;
+}
+
+.journal-body {
+  min-width: 0;
+}
+
+.journal-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.journal-body .meta {
+  margin: var(--space-1) 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.score {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
