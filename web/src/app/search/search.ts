@@ -3,16 +3,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { FaceCrop } from '../face-crop/face-crop';
 import { FaceBox, FaceFrame } from '../face-frame/face-frame';
 import { EventMatch, QueryFace, SearchQueryInfo } from '../models/search.model';
+import { SearchResult } from '../search-result/search-result';
 import { AuthCredentialsService } from '../services/auth-credentials.service';
 import { SearchService } from '../services/search.service';
-
-interface ResultCard {
-  match: EventMatch;
-  boxes: FaceBox[];
-}
 
 /**
  * Recherche par visage : composer la requête, puis vérifier les résultats.
@@ -30,7 +25,7 @@ interface ResultCard {
  */
 @Component({
   selector: 'app-search',
-  imports: [FormsModule, DecimalPipe, FaceFrame, FaceCrop],
+  imports: [FormsModule, DecimalPipe, FaceFrame, SearchResult],
   templateUrl: './search.html',
   styleUrl: './search.css',
 })
@@ -123,21 +118,6 @@ export class Search implements OnDestroy {
       },
     ];
   });
-
-  readonly resultCards = computed<ResultCard[]>(() =>
-    this.results().map((match) => ({
-      match,
-      boxes: [
-        {
-          index: match.evidence.image_id,
-          bbox: match.evidence.bbox,
-          tone: 'match' as const,
-          label: match.evidence.similarity.toFixed(2),
-          title: `Visage reconnu — similarité ${match.evidence.similarity.toFixed(2)}`,
-        },
-      ],
-    })),
-  );
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;

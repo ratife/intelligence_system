@@ -1,0 +1,91 @@
+/* Carte résultat, extraite de `search/` pour être partagée avec `camera-search/`. */
+
+:host {
+  display: block;
+}
+
+.result {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 160ms ease;
+}
+
+.result:hover {
+  box-shadow: var(--shadow-raised);
+}
+
+/* La photo garde ses proportions : recadrée en `cover`, le cadre du visage ne
+   tomberait plus au bon endroit — c'est toute la valeur de la preuve. */
+.result-media {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-3);
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.result-media app-face-frame {
+  --frame-max-height: 200px;
+}
+
+.result-body {
+  padding: var(--space-4);
+}
+
+.result-body h2 {
+  font-size: 1.02rem;
+  margin: 0 0 var(--space-1);
+  letter-spacing: -0.01em;
+}
+
+.result .meta {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Le gros plan répond à « qui ? » là où le cadre répond à « où ? » : les deux
+   accompagnent le score, jamais le score seul. */
+.evidence {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--hairline);
+}
+
+.evidence app-face-crop {
+  --crop-size: 68px;
+}
+
+.evidence-scores {
+  min-width: 0;
+}
+
+.result .confidence {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.result .confidence b {
+  font-size: 1.05rem;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.result .similarity {
+  margin: var(--space-1) 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
