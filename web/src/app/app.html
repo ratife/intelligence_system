@@ -43,14 +43,11 @@
           <span class="tab-label">{{ themeLabel() }}</span>
         </button>
 
-        <button
-          type="button"
-          class="tab quiet"
-          title="Se déconnecter"
-          (click)="logout()"
-        >
+        <button type="button" class="tab quiet" title="Se déconnecter" (click)="logout()">
           <svg class="tab-icon" viewBox="0 0 20 20" aria-hidden="true">
-            <path d="M12.5 6V4.5a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V14" />
+            <path
+              d="M12.5 6V4.5a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V14"
+            />
             <path d="M8.5 10h8m0 0-2.5-2.5M16.5 10 14 12.5" />
           </svg>
           <span class="tab-label">Se déconnecter</span>
@@ -68,6 +65,9 @@
         }
         @case ('search') {
           <app-search></app-search>
+        }
+        @case ('camera') {
+          <app-camera-search></app-camera-search>
         }
         @case ('import') {
           <app-event-import></app-event-import>

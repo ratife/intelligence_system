@@ -106,39 +106,8 @@
   }
 
   <div class="results">
-    @for (card of resultCards(); track card.match.event_id) {
-      <article class="result">
-        <div class="result-media">
-          <app-face-frame
-            [src]="card.match.evidence.image_url"
-            [alt]="'Photo de : ' + card.match.title"
-            [boxes]="card.boxes"
-          />
-        </div>
-
-        <div class="result-body">
-          <h2>{{ card.match.title }}</h2>
-          <p class="meta">{{ card.match.event_date }} — {{ card.match.address }}</p>
-
-          <div class="evidence">
-            <app-face-crop
-              [src]="card.match.evidence.image_url"
-              [bbox]="card.match.evidence.bbox"
-              alt="Gros plan du visage reconnu"
-            />
-            <div class="evidence-scores">
-              <p class="confidence">
-                <b>{{ card.match.confidence | number: '1.2-2' }}</b>
-                de confiance · {{ card.match.match_count }} visage(s)
-              </p>
-              <p class="similarity">
-                Similarité du visage montré :
-                {{ card.match.evidence.similarity | number: '1.2-2' }}
-              </p>
-            </div>
-          </div>
-        </div>
-      </article>
+    @for (match of results(); track match.event_id) {
+      <app-search-result [match]="match" />
     }
   </div>
 </div>
